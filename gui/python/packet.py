@@ -32,7 +32,7 @@ class Packet:
         self.ser = serial.Serial()
         self.ser.port = com_port
         self.ser.baudrate = baud
-        self.ser.timeout = timeout
+        # self.ser.timeout = timeout
 
         # Time to wait until the board becomes operational
         wakeup = 2
@@ -68,7 +68,7 @@ class Packet:
         checksum = struct.pack('B', checksum)
 
         # Complete frame
-        frame = header + payload + checksum
+        frame = header + data_length + payload + checksum
         return frame
 
     def send_packet(self, data, data_format, mode='tx'):
@@ -79,11 +79,14 @@ class Packet:
         try:
             self.ser.write(tx_frame)
             print(tx_frame)
-            for byte in tx_frame:
-                print(byte)
 
         except Exception as error:
+            print(error)
             traceback.print_tb(error.__traceback__)
+
+        # Clear buffer
+        self.ser.flushInput()
+        self.ser.flushOutput()
 
     def recieve_packet(self, data_format, data_length):
         checksum = 0
@@ -218,6 +221,10 @@ if __name__ == '__main__':
     packet.rx_motor_PID['ki'] = 30
     packet.rx_motor_PID['kd'] = 40
 
+    # packet.send()
+
     while True:
         packet.send()
         time.sleep(1)
+
+    packet.close()
