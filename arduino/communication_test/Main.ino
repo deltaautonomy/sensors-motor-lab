@@ -91,7 +91,7 @@ void StepperStep()
   digitalWrite(dir, LOW); //Pull direction pin low to move "forward" and high to move "reverse"
   digitalWrite(MS1, LOW); //Pull MS1, and MS2 high to set logic to 1/8th microstep resolution
   digitalWrite(MS2, LOW);
-  for(int x= 1; x<1000; x++)  //Loop the forward stepping enough times for motion to be visible
+  for(int x= 1; x<50; x++)  //Loop the forward stepping enough times for motion to be visible
   {
     digitalWrite(stp,HIGH); //Trigger one step forward
     delay(1);
