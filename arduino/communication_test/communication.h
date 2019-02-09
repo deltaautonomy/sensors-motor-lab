@@ -64,6 +64,7 @@ extern TXDataPacket tx_packet;
 extern RXDataPacket rx_packet;
 
 void send_data();
-int recieve_data();
+bool recieve_data();
+void clear_buffer();
 
 #endif

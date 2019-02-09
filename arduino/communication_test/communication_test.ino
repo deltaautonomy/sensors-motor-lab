@@ -26,17 +26,17 @@ void loop() {
 
     // send_data();
 
-    int ret = recieve_data();
+    if (recieve_data()) {
+        Serial.println(rx_packet.global_switch);
+        Serial.println(rx_packet.state);
+        Serial.println(rx_packet.servo_angle);
+        Serial.println(rx_packet.motor_angle);
+        Serial.println(rx_packet.motor_kp);
+        Serial.println(rx_packet.motor_ki);
+        Serial.println(rx_packet.motor_kd);
+        Serial.println();
+    }
 
     // Serial.println(ret);
-    // Serial.println(rx_packet.global_switch);
-    // Serial.println(rx_packet.state);
-    // Serial.println(rx_packet.servo_angle);
-    // Serial.println(rx_packet.motor_angle);
-    // Serial.println(rx_packet.motor_kp);
-    // Serial.println(rx_packet.motor_ki);
-    // Serial.println(rx_packet.motor_kd);
-    // Serial.println();
-
-    delay(2000);
+    // delay(50);
 }
