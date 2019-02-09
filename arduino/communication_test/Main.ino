@@ -18,6 +18,7 @@ Example based off of demos by Brian Schmalz (designer of the Easy Driver).
 http://www.schmalzhaus.com/EasyDriver/Examples/EasyDriverExamples.html
 ******************************************************************************/
 //Declare pin functions on Redboard
+#include <communication.h>
 #define stp 4
 #define dir 5
 #define MS1 3
@@ -60,18 +61,31 @@ void setup() {
 void loop() {
 
   buttonPush();
-    
-  switch (mode)
-  {
-    case 0:
-      {
-        StepperMain();
-      }
-      break;
-    default:
-      break;
+  if(circuitState == HIGH){   //&&(rx_packet.global_switch == 1)
+    switch (mode)  //rx_packet.state
+    {
+      case 0:
+        {
+          StepperMain();
+        }
+        break;
+      case 1:
+        {
+          //RC Servo Function
+        }
+        break
+      case 2:
+        {
+          //DC Motor Prateek
+        }
+      case 3:
+        {
+          //DC Motor Shubham  
+        }
+      default:
+        break;
+    }
   }
-  
 }
 
 //Reset Easy Driver pins to default states
@@ -102,10 +116,9 @@ void StepperStep()
 
 void StepperMain()
 {
-  if(circuitState == HIGH){
     digitalWrite(in_photo, HIGH);
     int val = analogRead(out_photo);
-    Serial.println(val);
+    Serial.println(val);   //tx_packet.slot_encoder = val; 
     if (val > 15)
     {
       digitalWrite(EN, LOW); //Pull enable pin low to allow motor control
@@ -115,7 +128,6 @@ void StepperMain()
     {
       digitalWrite(EN, HIGH);
     }
-  }
   resetStepperPins();
 }
 
