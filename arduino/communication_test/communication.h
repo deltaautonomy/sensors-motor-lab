@@ -1,15 +1,18 @@
+#include <Arduino.h>
+#include <stdint.h>
+
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
 // Structure to handle the various outputs to the GUI
 typedef struct TXDataPacket {
     // Boolean data
-    bool button1;
-    bool button2;
-    bool slot_encoder;
+    uint8_t button1;
+    uint8_t button2;
+    uint8_t slot_encoder;
 
     // Encoder data
-    uint32_t encoder_count;
+    int32_t encoder_count;
     float encoder_velocity;
 
     // Temperature sensor
@@ -22,8 +25,8 @@ typedef struct TXDataPacket {
     uint16_t ultrasonic_distance;
 
     // Filtered angles
-    float pitch_angle;
     float roll_angle;
+    float pitch_angle;
     float yaw_angle;
 
     // Raw accelerometer data
@@ -40,7 +43,7 @@ typedef struct TXDataPacket {
 // Structure to handle the various inputs from the GUI
 typedef struct RXDataPacket {
     // Enable for demo
-    bool global_switch;
+    uint8_t global_switch;
 
     // State select
     uint8_t state;
@@ -48,7 +51,7 @@ typedef struct RXDataPacket {
     // Input servo angle
     uint8_t servo_angle;
 
-    // Input servo angle
+    // Input motor angle
     uint16_t motor_angle;
 
     // DC motor PID gains
@@ -59,5 +62,8 @@ typedef struct RXDataPacket {
 
 extern TXDataPacket tx_packet;
 extern RXDataPacket rx_packet;
+
+void send_data();
+int recieve_data();
 
 #endif

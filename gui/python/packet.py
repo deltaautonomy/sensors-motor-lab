@@ -58,32 +58,34 @@ class Packet:
         direc = {'tx': '<', 'rx': '>'}
 
         # Pack data into bytes
-        header = struct.pack('cc', '$', direc[mode])
+        header = struct.pack('cc', '$'.encode('utf-8'), direc[mode].encode('utf-8'))
         payload = struct.pack(data_format, *data)
         data_length = struct.pack('B', len(payload))
 
         # Calculate checksum
         for byte in payload:
-            checksum ^= ord(byte)
+            checksum ^= byte
         checksum = struct.pack('B', checksum)
 
         # Complete frame
         frame = header + payload + checksum
         return frame
 
-    def send(self, data, data_format, mode='tx'):
+    def send_packet(self, data, data_format, mode='tx'):
         # Make frame
-        tx_frame = self.generateFrame(data, data_format, mode)
+        tx_frame = self.generate_frame(data, data_format, mode)
 
         # Send data
         try:
             self.ser.write(tx_frame)
-            return tx_frame
+            print(tx_frame)
+            for byte in tx_frame:
+                print(byte)
 
         except Exception as error:
             traceback.print_tb(error.__traceback__)
 
-    def recieve(self, data_format, data_length):
+    def recieve_packet(self, data_format, data_length):
         checksum = 0
         calcsum = 0
         payload = ''
@@ -134,11 +136,24 @@ class Packet:
 
         return None
 
-    def recieve_blocking(self, delay=2):
+    def send(self):
+        data = [
+            self.rx_global_switch,
+            self.rx_state,
+            self.rx_servo_angle,
+            self.rx_motor_angle,
+            self.rx_motor_PID['kp'],
+            self.rx_motor_PID['ki'],
+            self.rx_motor_PID['kd'],
+        ]
+
+        self.send_packet(data, '<BBBHfff')
+
+    def recieve(self, delay=2):
         data = None
         while not data:
             time.sleep(delay)
-            data = self.recieve('<BBBifBHHfffHHHHHH', 40)
+            data = self.recieve_packet('<BBBifBHHfffHHHHHH', 40)
 
         self.parse_data(data)
         self.display()
@@ -190,5 +205,19 @@ if __name__ == '__main__':
     packet = Packet()
     packet.start('/dev/ttyACM0')
 
+    # Recieve test
+    # while True:
+    #     packet.recieve()
+
+    # Send test
+    packet.rx_global_switch = False
+    packet.rx_state = 10
+    packet.rx_servo_angle = 90
+    packet.rx_motor_angle = 100
+    packet.rx_motor_PID['kp'] = 20
+    packet.rx_motor_PID['ki'] = 30
+    packet.rx_motor_PID['kd'] = 40
+
     while True:
-        packet.recieve_blocking()
+        packet.send()
+        time.sleep(1)

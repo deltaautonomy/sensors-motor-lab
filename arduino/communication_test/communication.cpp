@@ -1,5 +1,8 @@
 #include "communication.h"
 
+TXDataPacket tx_packet;
+RXDataPacket rx_packet;
+
 void send_data()
 {
     // Packet metadata
@@ -18,20 +21,25 @@ void send_data()
     // Send data length
     Serial.write(size);
 
-    // Update checksum
-    checksum = code ^ size;
-
     // Send byte array and update checksum
     for (int i = 0; i < size; i++) {
-        Serial.write(data[i]);
-        checksum ^= data[i];
+        Serial.write(buff[i]);
+        checksum ^= buff[i];
     }
 
     // Send checksum
     Serial.write(checksum);
 }
 
-bool recieve_data()
+void clear_buffer()
+{
+    while (Serial.available()) {
+        Serial.read();
+        Serial.flush();
+    }
+}
+
+int recieve_data()
 {
     // Packet metadata
     uint8_t size = sizeof(RXDataPacket);
@@ -41,27 +49,48 @@ bool recieve_data()
     uint8_t buff[size];
 
     // Check (frame + header) length
-    if (Serial.available() >= size + 3) {
+    if (Serial.available() >= size + 4) {
+
+        Serial.println("Here");
+        Serial.println(Serial.read());
 
         // Check header of data frame
-        if (Serial.read() != '$')
-            return false;
-        if (Serial.read() != '<')
-            return false;
+        if (Serial.read() != '$') {
+            Serial.println("\n$ failed");
+            clear_buffer();
+            return 4;
+        }
+        if (Serial.read() != '<') {
+            Serial.println("\n< failed");
+            clear_buffer();
+            return 5;
+        }
 
+        // Data length byte
+        Serial.read();
+
+        // Read data bytes
         for (int i = 0; i < size; i++) {
             buff[i] = Serial.read();
             checksum ^= buff[i];
         }
+
+        // Discard frame if checksum does not match
+        if (Serial.read() != checksum) {
+            Serial.println("Checksum failed");
+            Serial.println(checksum);
+            clear_buffer();
+            return 6;
+        }
+
+        // Convert bytes to struct
+        memcpy(&rx_packet, buff, size);
+
+        // Success
+        clear_buffer();
+        return 7;
     }
 
-    // Discard frame if checksum does not match
-    if (Serial.read() != checksum)
-        return false;
-
-    // Convert bytes to struct
-    memcpy(&rx_packet, buff, size);
-
-    // Success
-    return true;
+    clear_buffer();
+    return 2;
 }
