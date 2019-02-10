@@ -19,6 +19,8 @@ http://www.schmalzhaus.com/EasyDriver/Examples/EasyDriverExamples.html
 ******************************************************************************/
 //Declare pin functions on Redboard
 #include "communication.h"
+#include <Servo.h>
+
 #define stp 4
 #define dir 5
 #define MS1 3
@@ -28,6 +30,10 @@ http://www.schmalzhaus.com/EasyDriver/Examples/EasyDriverExamples.html
 #define out_photo A0
 #define buttonPin 2
 
+#define servoin 9
+#define flexpin A4
+
+
 int circuitState = HIGH;         // the current state of the output pin
 int buttonState;             // the current reading from the input pin
 int lastButtonState = LOW;   // the previous reading from the input pin
@@ -36,6 +42,8 @@ unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
 int mode;
+
+Servo servo1;
 
 void setup() {
   // stepper code
@@ -54,12 +62,13 @@ void setup() {
   pinMode(buttonPin, INPUT);
   
   Serial.begin(9600); //Open Serial connection for debugging
-
+  servo1.attach(servoin);
 }
 
 //Main loop
 void loop() {
 
+  recieve_data();
   buttonPush();
   if(circuitState == HIGH){   //&&(rx_packet.global_switch == 1)
     switch (mode)  //rx_packet.state
@@ -71,7 +80,7 @@ void loop() {
         break;
       case 1:
         {
-          //RC Servo Function
+          ServoMain();
         }
         break;
       case 2:
@@ -87,6 +96,7 @@ void loop() {
         break;
     }
   }
+  send_data();
 }
 
 //Reset Easy Driver pins to default states
@@ -118,7 +128,7 @@ void StepperStep()
 void StepperMain()
 {
     digitalWrite(in_photo, HIGH);
-    int val = analogRead(out_photo);
+    uint8_t val = analogRead(out_photo);
     Serial.println(val);   //tx_packet.slot_encoder  = val; 
     if (val > 15)
     {
@@ -154,4 +164,15 @@ void buttonPush()
   }
   // save the button reading as last button reading
   lastButtonState = reading;
+}
+
+void ServoMain()
+{
+  //servoposition = rx_packet.servoangle
+  uint16_t flexposition = analogRead(flexpin); 
+  int servoposition = map(flexposition, 10, 1023, 0, 90); 
+  servoposition = constrain(servoposition, 0, 90);  
+  servo1.write(servoposition);   
+  delay(1000); 
+//  tx_packet./
 }
