@@ -15,10 +15,12 @@ class Packet:
         self.tx_temperature = 0
         self.tx_sharp_distance = 0
         self.tx_ultrasonic_distance = 0
+        self.tx_flex_sensor = 0
 
         self.tx_angles = {'pitch': 0, 'roll': 0, 'yaw': 0}
         self.tx_accel = {'x': 0, 'y': 0, 'z': 0}
         self.tx_gyro = {'x': 0, 'y': 0, 'z': 0}
+        self.tx_servo_angle = 0
 
         # RX data
         self.rx_global_switch = False
@@ -156,7 +158,7 @@ class Packet:
         data = None
         while not data:
             time.sleep(delay)
-            data = self.recieve_packet('<BBBifBHHfffHHHHHH', 40)
+            data = self.recieve_packet('<BBBifBHHHfffHHHHHHB', 43)
 
         self.parse_data(data)
         self.display()
@@ -175,21 +177,25 @@ class Packet:
         self.tx_temperature = data[5]
         self.tx_sharp_distance = data[6]
         self.tx_ultrasonic_distance = data[7]
+        self.tx_flex_sensor = data[8]
 
         # Filtered angles
-        self.tx_angles['roll'] = data[8]
-        self.tx_angles['pitch'] = data[9]
-        self.tx_angles['yaw'] = data[10]
+        self.tx_angles['roll'] = data[9]
+        self.tx_angles['pitch'] = data[10]
+        self.tx_angles['yaw'] = data[11]
 
         # Raw accelerometer data
-        self.tx_accel['x'] = data[11]
-        self.tx_accel['y'] = data[12]
-        self.tx_accel['z'] = data[13]
+        self.tx_accel['x'] = data[12]
+        self.tx_accel['y'] = data[13]
+        self.tx_accel['z'] = data[14]
 
         # Raw gyroscope data
-        self.tx_gyro['x'] = data[14]
-        self.tx_gyro['y'] = data[15]
-        self.tx_gyro['z'] = data[16]
+        self.tx_gyro['x'] = data[15]
+        self.tx_gyro['y'] = data[16]
+        self.tx_gyro['z'] = data[17]
+
+        # Servo angle
+        self.tx_servo_angle = data[18]
 
     def display(self):
         print('tx_button1:', self.tx_button1)
@@ -199,9 +205,11 @@ class Packet:
         print('tx_temperature:', self.tx_temperature)
         print('tx_sharp_distance:', self.tx_sharp_distance)
         print('tx_ultrasonic_distance:', self.tx_ultrasonic_distance)
+        print('tx_flex_sensor', self.tx_flex_sensor)
         print('tx_angles:', self.tx_angles)
         print('tx_accel:', self.tx_accel)
         print('tx_gyro:', self.tx_gyro)
+        print('tx_servo_angle:', self.tx_servo_angle)
 
 
 if __name__ == '__main__':
