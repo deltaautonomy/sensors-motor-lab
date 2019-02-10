@@ -28,13 +28,15 @@ class Packet:
         self.rx_servo_angle = 0
         self.rx_motor_angle = 0
         self.rx_motor_PID = {'kp': 0, 'ki': 0, 'kd': 0}
+        self.stepper_value = 0
+        self.stepper_dir = 0
 
     def start(self, com_port, baud=115200, timeout=0):
         # Configure serial port
         self.ser = serial.Serial()
         self.ser.port = com_port
         self.ser.baudrate = baud
-        # self.ser.timeout = timeout
+        self.ser.timeout = timeout
 
         # Time to wait until the board becomes operational
         wakeup = 2
@@ -150,9 +152,11 @@ class Packet:
             self.rx_motor_PID['kp'],
             self.rx_motor_PID['ki'],
             self.rx_motor_PID['kd'],
+            self.stepper_value,
+            self.stepper_dir,
         ]
 
-        self.send_packet(data, '<BBBHfff')
+        self.send_packet(data, '<BBBHfffHB')
 
     def recieve(self, delay=2):
         data = None

@@ -64,6 +64,10 @@ typedef struct RXDataPacket {
     float motor_kp;
     float motor_ki;
     float motor_kd;
+
+    // Stepper motor
+    uint16_t stepper_value;
+    uint8_t stepper_dir;
 } __attribute__((__packed__));
 
 extern TXDataPacket tx_packet;
