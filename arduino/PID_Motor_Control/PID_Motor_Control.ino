@@ -10,6 +10,7 @@
 
 volatile double encoder_count = 0;
 volatile double left_prev_count = 0;
+unsigned long last_time = 0;
 double RPM;
 
 // Position Control Initialization
@@ -56,12 +57,14 @@ void pwmOut(int out)
     out = map(abs(out), 0, 255, MIN_RPM, 255);
     analogWrite(Motor1_enable, out);
 }
+
 void Set_Motor_Direction(int A, int B)
 {
     //  Update new direction
     digitalWrite(Motor1_A1, A);
     digitalWrite(Motor1_A2, B);
 }
+
 void Encoder_ISR()
 {
     //  encoder_count++;
@@ -71,6 +74,7 @@ void Encoder_ISR()
     else
         state ? encoder_count++ : encoder_count--;
 }
+
 void PID_Loop()
 {
     setpoint_pos = analogRead(Pot_Pin); // modify to fit motor and encoder characteristics, potmeter connected to A0
@@ -81,6 +85,7 @@ void PID_Loop()
     position_PID.Compute(); // calculate new output
     pwmOut(output_pos);
 }
+
 void timer4_init()
 {
     TCCR4B = 0x00; // Stop Timer
@@ -130,8 +135,6 @@ void setup()
     delay(5000);
     Serial.println("Starting now");
 }
-
-unsigned long last_time = 0;
 
 void loop()
 {
