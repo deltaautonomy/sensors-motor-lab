@@ -1,0 +1,17 @@
+const int analogIn = A1;
+
+int RawValue= 0;
+double Voltage = 0;
+double tempC = 0;
+
+void setup(){  
+  Serial.begin(9600);
+}
+
+void loop(){
+  
+  RawValue = analogRead(analogIn);
+  Voltage = (RawValue / 1023.0) * 5000; 
+  tempC = (Voltage-500) * 0.1;
+  delay(500);  
+ }
