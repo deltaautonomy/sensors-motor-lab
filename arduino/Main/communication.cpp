@@ -35,11 +35,11 @@ void clear_buffer()
 {
     while (Serial.available()) {
         Serial.read();
-        Serial.flush();
     }
+    Serial.flush();
 }
 
-int recieve_data()
+bool recieve_data()
 {
     // Packet metadata
     uint8_t size = sizeof(RXDataPacket);
@@ -50,20 +50,12 @@ int recieve_data()
 
     // Check (frame + header) length
     if (Serial.available() >= size + 4) {
-
-        Serial.println("Here");
-        Serial.println(Serial.read());
-
         // Check header of data frame
         if (Serial.read() != '$') {
-            Serial.println("\n$ failed");
-            clear_buffer();
-            return 4;
+            return;
         }
         if (Serial.read() != '<') {
-            Serial.println("\n< failed");
-            clear_buffer();
-            return 5;
+            return;
         }
 
         // Data length byte
@@ -77,20 +69,16 @@ int recieve_data()
 
         // Discard frame if checksum does not match
         if (Serial.read() != checksum) {
-            Serial.println("Checksum failed");
-            Serial.println(checksum);
-            clear_buffer();
-            return 6;
+            return;
         }
 
         // Convert bytes to struct
         memcpy(&rx_packet, buff, size);
 
         // Success
-        clear_buffer();
-        return 7;
+        return true;
     }
 
-    clear_buffer();
-    return 2;
+    // Failure
+    return false;
 }

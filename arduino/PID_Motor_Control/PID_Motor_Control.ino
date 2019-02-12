@@ -1,17 +1,34 @@
 #include <PID_v1.h>
+#include "TimerFour.h"
+
+// DC Motor
 #define encoder_ch1 19 // Quadrature encoder A pin
 #define encoder_ch2 20 // Quadrature encoder B pin
 #define Motor1_enable 44 // PWM outputs to L298N H-Bridge motor driver module
 #define Motor1_A1 51
 #define Motor1_A2 53
-#define Pot_Pin A15
-#define MIN_RPM 65
+#define MIN_RPM 55
 #define ROT_FACTOR 1
 
+#define SensorPin_DC A15
+#define DEFAULT_LED 13
+
+// TODO: Clean
+#define PositionGUI 1
+#define VelocityGUI 2
+#define PositionMain 3
+#define VelocityMain 4
+
+// ISR variables
 volatile double encoder_count = 0;
-volatile double left_prev_count = 0;
+volatile double Motor_prev_count = 0;
+volatile double RPM;
+
 unsigned long last_time = 0;
-double RPM;
+long SpeedControl_Temp;
+
+// TODO: Replace with RX packet
+int state = VelocityMain;
 
 // Position Control Initialization
 double kp_pos = 0.8, ki_pos = 0, kd_pos = 0; // modify for optimal performance
@@ -19,7 +36,7 @@ double input_pos = 0, output_pos = 0, setpoint_pos = 0;
 PID position_PID(&input_pos, &output_pos, &setpoint_pos, kp_pos, ki_pos, kd_pos, DIRECT);
 
 // Velocity Control Initialization
-double kp_vel = 0, ki_vel = 0, kd_vel = 0.0; // modify for optimal performance
+double kp_vel = 4.9, ki_vel = 0, kd_vel = 0.0; // modify for optimal performance
 double input_vel = 0, output_vel = 0, setpoint_vel = 0;
 PID velocity_PID(&input_vel, &output_vel, &setpoint_vel, kp_vel, ki_vel, kd_vel, DIRECT);
 
@@ -30,20 +47,11 @@ void PID_Setup_Position()
     position_PID.SetOutputLimits(-255, 255);
 }
 
-void Motor_Setup()
+void PID_Setup_Velocity()
 {
-    pinMode(encoder_ch1, INPUT_PULLUP); // quadrature encoder input A
-    pinMode(encoder_ch2, INPUT_PULLUP);
-    pinMode(Motor1_A1, OUTPUT);
-    pinMode(Motor1_A2, OUTPUT);
-    pinMode(Motor1_enable, OUTPUT);
-
-    digitalWrite(Motor1_A1, LOW);
-    digitalWrite(Motor1_A2, LOW);
-    analogWrite(Motor1_enable, 0);
-
-    attachInterrupt(digitalPinToInterrupt(encoder_ch1), Encoder_ISR, CHANGE);
-    TCCR5C = TCCR5C & 0b11111000 | 1; // set 31KHz PWM to prevent motor noise
+    velocity_PID.SetMode(AUTOMATIC);
+    velocity_PID.SetSampleTime(10);
+    velocity_PID.SetOutputLimits(0, 255);
 }
 
 void pwmOut(int out)
@@ -77,62 +85,101 @@ void Encoder_ISR()
 
 void PID_Loop()
 {
-    setpoint_pos = analogRead(Pot_Pin); // modify to fit motor and encoder characteristics, potmeter connected to A0
-    setpoint_pos = map(setpoint_pos, 0, 1024, -360 * ROT_FACTOR, 360 * ROT_FACTOR);
-    setpoint_pos = map(setpoint_pos, -360 * ROT_FACTOR, 360 * ROT_FACTOR, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
-    input_pos = encoder_count; // data from encoder
-    // Serial.println(encoderPos);                      // monitor motor position
-    position_PID.Compute(); // calculate new output
-    pwmOut(output_pos);
+    // If state is to control position using Main OR GUI
+    if (state == PositionMain || state == PositionGUI) {
+        // Get setpoint
+        if (state == PositionMain) {
+            setpoint_pos = analogRead(SensorPin_DC); // modify to fit motor and encoder characteristics, potmeter connected to A0
+            setpoint_pos = map(setpoint_pos, 0, 1024, -360 * ROT_FACTOR, 360 * ROT_FACTOR);
+            setpoint_pos = map(setpoint_pos, -360 * ROT_FACTOR, 360 * ROT_FACTOR, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
+        }
+
+        if (state == PositionGUI) {
+            // TODO: Replace with RX packets
+            // Get setpoint from GUI
+            // setpoint_pos = (double) rx_packet.motor_angle;
+        }
+
+        // Get input
+        input_pos = encoder_count;
+
+        // PID loop
+        position_PID.Compute();
+
+        // Set output
+        pwmOut(output_pos);
+    }
+
+    else if (state == VelocityMain || state == VelocityGUI) {
+        // Get setpoint
+        if (state == VelocityMain) {
+            setpoint_vel = analogRead(SensorPin_DC);
+            setpoint_vel = map(setpoint_vel, 0, 1024, 0, 110);
+        }
+
+        if (state == VelocityGUI) {
+            // Get setpoint from GUI
+        }
+
+        // Get input
+        input_vel = RPM;
+
+        // PID loop
+        velocity_PID.Compute();
+
+        // Set output
+        pwmOut(output_vel);
+    }
 }
 
-void timer4_init()
+/*
+    (Change in encoder count) * (60 sec/1 min)
+RPM = __________________________________________
+    (Change in time --> 20ms) * (PPR --> 378/2)
+*/
+void timer4_callback()
 {
-    TCCR4B = 0x00; // Stop Timer
-    TCNT4 = 0xFB80; // 0.02s
-    OCR4A = 0x0000; // Output Compare Register (OCR) - Not used
-    OCR4B = 0x0000; // Output Compare Register (OCR) - Not used
-    OCR4C = 0x0000; // Output Compare Register (OCR) - Not used
-    ICR4 = 0x0000; // Input Capture Register (ICR)  - Not used
-    TCCR4A = 0x00;
-    TCCR4C = 0x00;
-}
-
-/**********************************
-  Function name : start_timer4
-  Functionality : Start timer 4
-  Arguments   : None
-  Return Value  : None
-  Example Call  : start_timer4()
-***********************************/
-void start_timer4()
-{
-    TCCR4B = 0x04; // Prescaler 256 1-0-0
-    TIMSK4 = 0x01; // Enable Timer Overflow Interrupt
-}
-
-ISR(TIMER4_OVF_vect)
-{
-    TCNT4 = 0xFB80;
-
     // Make a local copy of the global encoder count
-    volatile double left_current_count = encoder_count;
-    //     (Change in encoder count) * (60 sec/1 min)
-    // RPM = __________________________________________
-    //     (Change in time --> 20ms) * (PPR --> 840)
-    RPM = (float)(((left_current_count - left_prev_count) * 60) / (0.02 * 420));
+    volatile double Motor_current_count = encoder_count;
+    RPM = (double) (((Motor_current_count - Motor_prev_count) * 60) / (0.02 * 378));
 
     // Store current encoder count for next iteration
-    left_prev_count = left_current_count;
+    Motor_prev_count = Motor_current_count;
+}
+
+void Motor_Setup()
+{
+    pinMode(encoder_ch1, INPUT_PULLUP); // quadrature encoder input A
+    pinMode(encoder_ch2, INPUT_PULLUP);
+    pinMode(Motor1_A1, OUTPUT);
+    pinMode(Motor1_A2, OUTPUT);
+    pinMode(Motor1_enable, OUTPUT);
+    pinMode(SensorPin_DC, INPUT);
+
+    digitalWrite(Motor1_A1, LOW);
+    digitalWrite(Motor1_A2, LOW);
+    analogWrite(Motor1_enable, 0);
+
+    // Initialize timer 5 PWM interrupt for enable
+    attachInterrupt(digitalPinToInterrupt(encoder_ch1), Encoder_ISR, CHANGE);
+    TCCR5C = TCCR5C & 0b11111000 | 1; // set 31KHz PWM to prevent motor noise
+    
+    // Initialize timer 4 interrupt at 20ms
+    Timer4.initialize(20000);         
+    Timer4.attachInterrupt(timer4_callback);
+
+    // PID_Setup_Position();
+    PID_Setup_Velocity();
 }
 
 void setup()
 {
-    PID_Setup_Position();
     Motor_Setup();
+
+    pinMode(DEFAULT_LED, OUTPUT);
     Serial.begin(115200);
 
-    delay(5000);
+    delay(2000);
     Serial.println("Starting now");
 }
 
@@ -140,13 +187,14 @@ void loop()
 {
     if (millis() - last_time > 200) {
         last_time = millis();
-        Serial.print(encoder_count);
+        // Serial.print(encoder_count);
+        Serial.print(RPM);
         Serial.print('\t');
-        Serial.print(output_pos);
+        Serial.print(output_vel);
         Serial.print('\t');
-        Serial.print(abs(encoder_count + output_pos));
+        Serial.print(abs(setpoint_vel - output_vel));
         Serial.print('\t');
-        Serial.println(setpoint_pos);
+        Serial.println(setpoint_vel);
     }
     PID_Loop();
 }

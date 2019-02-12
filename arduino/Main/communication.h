@@ -24,6 +24,9 @@ typedef struct TXDataPacket {
     // Ultrasonic sensor
     uint16_t ultrasonic_distance;
 
+    // Flex sensor
+    uint16_t flex_sensor;
+
     // Filtered angles
     float roll_angle;
     float pitch_angle;
@@ -38,6 +41,9 @@ typedef struct TXDataPacket {
     uint16_t gyro_x;
     uint16_t gyro_y;
     uint16_t gyro_z;
+
+    // Ouput servo angle
+    uint8_t servo_angle;
 } __attribute__((__packed__));
 
 // Structure to handle the various inputs from the GUI
@@ -58,12 +64,17 @@ typedef struct RXDataPacket {
     float motor_kp;
     float motor_ki;
     float motor_kd;
+
+    // Stepper motor
+    uint16_t stepper_value;
+    uint8_t stepper_dir;
 } __attribute__((__packed__));
 
 extern TXDataPacket tx_packet;
 extern RXDataPacket rx_packet;
 
 void send_data();
-int recieve_data();
+bool recieve_data();
+void clear_buffer();
 
 #endif
