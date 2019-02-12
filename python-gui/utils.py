@@ -30,6 +30,7 @@ class StoppableThread(threading.Thread):
             )
         else:
             super(StoppableThread, self).__init__(target=target, daemon=daemon)
+
         self._stop_event = threading.Event()
 
     def stop(self):

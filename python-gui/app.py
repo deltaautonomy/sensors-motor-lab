@@ -17,7 +17,8 @@ import time
 # External modules
 import numpy as np
 from tkinter import *
-from tkinter.ttk import Separator, Progressbar
+from tkinter import ttk
+from tkinter.ttk import Separator, Progressbar, Notebook
 from PIL import ImageTk, Image
 import matplotlib
 
@@ -38,6 +39,18 @@ GUI_CLOSED = False
 # Arduino packet object
 arduino = Packet()
 
+STATES = [
+    'Reserved',
+    'DC Motor Position (GUI)',
+    'DC Motor Velocity (GUI)',
+    'DC Motor Position (Sensor)',
+    'DC Motor Velocity (Sensor)',
+    'Stepper Motor (GUI)',
+    'Stepper Motor (Sensor)',
+    'Servo Motor (GUI)',
+    'Servo Motor (Sensor)',
+]
+
 
 class SensorPanel:
     def __init__(self, name, min_val, max_val, parent, row, column, padx):
@@ -48,8 +61,9 @@ class SensorPanel:
 
         # Append to Tk parent panel
         self.panel = Frame(parent, width=170, height=10, pady=3)
-        self.name_label = Label(self.panel, text=name)
-        self.name_label.grid(row=0, column=0, columnspan=2, padx=9)
+        if name:
+            self.name_label = Label(self.panel, text=name)
+            self.name_label.grid(row=0, column=0, columnspan=2, padx=9)
         self.pb = Progressbar(
             self.panel, orient="horizontal", mode="determinate", length=140
         )
@@ -65,11 +79,66 @@ class SensorPanel:
         self.value_label.insert(0, value)
 
 
+class SectionTitle:
+    def __init__(self, title, parent, row, column, width):
+        Separator(parent, orient=HORIZONTAL).grid(row=row, column=column, sticky=(W, E))
+        self.panel = Frame(parent, width=width, height=10, pady=10)
+        self.panel.grid(row=row, column=column)
+        self.label = Label(self.panel, text=" %s " % title)
+        self.label.pack()
+
+
+class StatePanel:
+    def __init__(self, state, parent, row, column, width, padx):
+        self.state_index = STATES.index(state)
+        print('Create panel for state', self.state_index)
+
+        self.panel = Frame(parent, width=width, pady=3)
+
+        if self.state_index == 1:
+            print('packing')
+            SectionTitle('Sensor Data', self.panel, 0, 0, 170)
+            self.sensor1 = SensorPanel(
+                None, 0, 500, self.panel, row=1, column=0, padx=9
+            )
+
+            SectionTitle('Actuator Data', self.panel, 2, 0, 170)
+            self.sensor2 = SensorPanel(None, 0, 50, self.panel, row=3, column=0, padx=9)
+
+        elif self.state_index == 2:
+            pass
+
+        elif self.state_index == 3:
+            pass
+
+        elif self.state_index == 4:
+            pass
+
+        elif self.state_index == 5:
+            pass
+
+        elif self.state_index == 6:
+            pass
+
+        elif self.state_index == 7:
+            pass
+
+        elif self.state_index == 8:
+            pass
+
+        self.panel.grid(row=row, column=column, width=width, padx=padx)
+        root.update()
+
+    def destroy(self):
+        print('Destroy panel for state', self.state_index)
+        self.panel.destroy()
+
+
 class GUI(object):
     def __init__(self, master):
         # Main Window
         master.title("Sensors and Motors Lab  |  Delta Autonomy")
-        master.geometry('1100x600')
+        master.geometry('1100x800')
         master.resizable(width=False, height=False)
 
         self.ICON_PATH = PATH + 'images/da_icon.png'
@@ -79,13 +148,13 @@ class GUI(object):
         #########################################################################################
 
         # Master Panel
-        self.mpanel = Frame(master, width=1100, height=600, padx=5, pady=4)
+        self.mpanel = Frame(master, width=1100, height=800, padx=5, pady=4)
         self.mpanel.pack()
 
         #########################################################################################
 
         # Left Panel
-        self.lpanel = Frame(self.mpanel, width=170, height=600, pady=3)
+        self.lpanel = Frame(self.mpanel, width=170, height=800, pady=3)
         self.lpanel.grid(row=0, column=0, rowspan=4)
 
         #########################################################################################
@@ -130,11 +199,7 @@ class GUI(object):
         #########################################################################################
 
         # COM Port Panel
-        Separator(self.lpanel, orient=HORIZONTAL).grid(row=5, column=0, sticky=(W, E))
-        self.l1panel = Frame(self.lpanel, width=170, height=10, pady=10)
-        self.l1panel.grid(row=5, column=0)
-        self.tlabel = Label(self.l1panel, text=" Select COM Port ")
-        self.tlabel.pack()
+        SectionTitle('Select COM Port', self.lpanel, 5, 0, 170)
 
         self.comport = StringVar(master)
         self.comports = self.get_com_ports()
@@ -152,36 +217,28 @@ class GUI(object):
 
         #########################################################################################
 
-        Separator(self.lpanel, orient=HORIZONTAL).grid(row=8, column=0, sticky=(W, E))
-        self.l2panel = Frame(self.lpanel, width=170, height=10, pady=10)
-        self.l2panel.grid(row=8, column=0)
-        self.tlabel = Label(self.l2panel, text=" Select Sensor ")
-        self.tlabel.pack()
+        # State Select Panel
+        SectionTitle('Select State', self.lpanel, 8, 0, 170)
 
-        self.sensor1 = SensorPanel(
-            'Sensor1', 0, 500, self.lpanel, row=9, column=0, padx=9
+        self.state = StringVar(master)
+        self.states = STATES[1:]
+        self.ddstate = OptionMenu(
+            self.lpanel, self.state, *self.states, command=self.state_select
         )
-        self.sensor2 = SensorPanel(
-            'Sensor2', 0, 50, self.lpanel, row=10, column=0, padx=9
+        self.ddstate.config(width=22)
+        self.ddstate.grid(row=9, column=0, padx=9)
+
+        self.b2 = Button(
+            self.lpanel, text="Start", width=22, command=self.b2_clicked, pady=4
         )
+        self.b2.grid(row=10, column=0, padx=9, sticky=(W, E))
+        self.b2.configure(state=DISABLED)
 
-        # self.b2 = Button(self.lpanel, text="Button 2", width=22, command=self.b2_clicked, pady=4)
-        # self.b2.grid(row=7, column=0, padx=9)
+        #########################################################################################
 
-        # self.b3 = Button(self.lpanel, text="Button 3", width=22, command=self.b3_clicked, pady=4)
-        # self.b3.grid(row=9, column=0, padx=9)
-
-        # self.b7 = Button(self.lpanel, text="Button 4", width=22, command=self.b7_clicked, pady=4)
-        # self.b7.grid(row=10, column=0, padx=9)
-
-        # self.b4 = Button(self.lpanel, text="Button 5", width=22, command=self.b4_clicked, pady=4)
-        # self.b4.grid(row=11, column=0, padx=9)
-
-        # self.b5 = Button(self.lpanel, text="Button 6", width=22, command=self.b5_clicked, pady=4)
-        # self.b5.grid(row=12, column=0, padx=9)
-
-        # self.b6 = Button(self.lpanel, text="Button 7", width=22, command=self.b6_clicked, pady=4)
-        # self.b6.grid(row=13, column=0, padx=9)
+        # Dynamic State Panel
+        self.state_panel = Frame(self.lpanel, width=170, height=200, pady=3)
+        self.dynamic_panel = None
 
         #########################################################################################
 
@@ -192,28 +249,15 @@ class GUI(object):
 
         #########################################################################################
 
-        # Right Panel
-        self.rpanel = Frame(self.mpanel, width=170, height=600, pady=3)
-        self.rpanel.grid(row=0, column=2, rowspan=4)
-
-        #########################################################################################
-
-        # Seperator
-        Separator(self.mpanel, orient=VERTICAL).grid(
-            row=0, column=3, rowspan=20, sticky=(N, S), padx=6
-        )
-
-        #########################################################################################
-
         # Graph Panel
-        # Separator(self.mpanel, orient=HORIZONTAL).grid(row=0, column=4, sticky=(W, E))
-        # l3panel = Frame(self.mpanel, width=600, height=10, pady=3)
-        # l3panel.grid(row=0, column=4)
-        # tlabel = Label(l3panel, text=" Interactive Terminal ")
-        # tlabel.pack()
+        Separator(self.mpanel, orient=HORIZONTAL).grid(row=0, column=4, sticky=(W, E))
+        l3panel = Frame(self.mpanel, width=800, height=10, pady=3)
+        l3panel.grid(row=0, column=4)
+        tlabel = Label(l3panel, text=" Interactive Terminal ")
+        tlabel.pack()
 
-        # tpanel = Frame(self.mpanel, bg='#AAAAAA', width=550, height=565, pady=3)
-        # tpanel.grid(row=1, column=2)
+        tpanel = Frame(self.mpanel, bg='#AAAAAA', width=550, height=565, pady=3)
+        tpanel.grid(row=1, column=2)
 
         # Insert Terminal
         # wid = tpanel.winfo_id()
@@ -227,6 +271,17 @@ class GUI(object):
         print('Port changed:', port)
         self.b1.configure(state=NORMAL)
 
+    def state_select(self, state):
+        print('State changed:', STATES.index(state), state)
+        self.b2.configure(state=NORMAL)
+
+        if self.dynamic_panel:
+            self.dynamic_panel.destroy()
+
+        self.dynamic_panel = StatePanel(
+            state, self.state_panel, row=0, column=0, width=170, padx=3
+        )
+
     def b1_clicked(self):
         print('B1 Clicked')
         if self.b1['text'] == 'Close Port':
@@ -237,7 +292,13 @@ class GUI(object):
             self.ddcom.configure(state=DISABLED)
 
     def b2_clicked(self):
-        pass
+        print('B2 Clicked')
+        if self.b2['text'] == 'Stop':
+            self.b2['text'] = 'Start'
+            self.ddstate.configure(state=NORMAL)
+        elif self.b2['text'] == 'Start':
+            self.b2['text'] = 'Stop'
+            self.ddstate.configure(state=DISABLED)
 
     def b3_clicked(self):
         pass
@@ -260,8 +321,11 @@ def packet_listener():
     count = 0
     while not GUI_CLOSED:
         if app:
-            app.sensor1.set_sensor_value(count)
-            app.sensor2.set_sensor_value(count)
+            try:
+                app.sensor1.set_sensor_value(count)
+                app.sensor2.set_sensor_value(count)
+            except AttributeError:
+                pass
             count += 1
         time.sleep(0.1)
 
