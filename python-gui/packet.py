@@ -6,6 +6,8 @@ import traceback
 
 class Packet:
     def __init__(self):
+        self.is_open = False
+
         # TX data
         self.tx_button1 = False
         self.tx_button2 = False
@@ -48,13 +50,19 @@ class Packet:
         except Exception as error:
             traceback.print_tb(error.__traceback__)
             self.ser.close()
+            self.is_open = False
 
         # Clear buffer
         self.ser.flushInput()
         self.ser.flushOutput()
+        self.is_open = True
 
     def close(self):
-        self.ser.close()
+        try:
+            self.ser.close()
+        except AttributeError as e:
+            print(e)
+        self.is_open = False
 
     def generate_frame(self, data, data_format, mode):
         checksum = 0
@@ -158,14 +166,19 @@ class Packet:
 
         self.send_packet(data, '<BBBHfffHB')
 
-    def recieve(self, delay=2):
+    def recieve(self, delay=0.2, max_retries=5):
         data = None
+        retries = 0
         while not data:
+            if retries > max_retries:
+                return False
             time.sleep(delay)
+            retries += 1
             data = self.recieve_packet('<BBBifBHHHfffHHHHHHB', 43)
 
         self.parse_data(data)
         self.display()
+        return True
 
     def parse_data(self, data):
         # Boolean data

@@ -1,5 +1,5 @@
 /******************************************************************************
-  Teaam Delta Autonomy - Sensors and Motors Assignment
+  Team Delta Autonomy - Sensors and Motors Assignment
 ******************************************************************************/
 #include "communication.h"
 #include <Servo.h>
@@ -53,7 +53,6 @@ void StepperStep()
 {
   for (int x = 1; x < 1000; x++) //Loop the forward stepping enough times for motion to be visible
   {
-    Serial.println("Motor");
     digitalWrite(step_stp, HIGH); //Trigger one step forward
     delay(1);
     digitalWrite(step_stp, LOW); //Pull step pin low so it can be triggered again
