@@ -4,7 +4,7 @@
 // DC Motor
 #define encoder_ch1 19 // Quadrature encoder A pin
 #define encoder_ch2 20 // Quadrature encoder B pin
-#define Motor1_enable 44 // PWM outputs to L298N H-Bridge motor driver module
+#define Motor1_enable 3 // PWM outputs to L298N H-Bridge motor driver module
 #define Motor1_A1 51
 #define Motor1_A2 53
 #define MIN_RPM 55
@@ -28,7 +28,7 @@ unsigned long last_time = 0;
 long SpeedControl_Temp;
 
 // TODO: Replace with RX packet
-int state = VelocityMain;
+int state = PositionMain;
 
 // Position Control Initialization
 double kp_pos = 0.8, ki_pos = 0, kd_pos = 0; // modify for optimal performance
@@ -43,14 +43,14 @@ PID velocity_PID(&input_vel, &output_vel, &setpoint_vel, kp_vel, ki_vel, kd_vel,
 void PID_Setup_Position()
 {
     position_PID.SetMode(AUTOMATIC);
-    position_PID.SetSampleTime(10);
+    position_PID.SetSampleTime(20);
     position_PID.SetOutputLimits(-255, 255);
 }
 
 void PID_Setup_Velocity()
 {
     velocity_PID.SetMode(AUTOMATIC);
-    velocity_PID.SetSampleTime(10);
+    velocity_PID.SetSampleTime(20);
     velocity_PID.SetOutputLimits(0, 255);
 }
 
@@ -114,7 +114,7 @@ void PID_Loop()
         // Get setpoint
         if (state == VelocityMain) {
             setpoint_vel = analogRead(SensorPin_DC);
-            setpoint_vel = map(setpoint_vel, 0, 1024, 0, 110);
+            setpoint_vel = map(setpoint_vel, 0, 1024, 0, 140);
         }
 
         if (state == VelocityGUI) {
@@ -168,7 +168,7 @@ void Motor_Setup()
     Timer4.initialize(20000);
     Timer4.attachInterrupt(timer4_callback);
 
-    // PID_Setup_Position();
+    PID_Setup_Position();
     PID_Setup_Velocity();
 }
 
@@ -187,14 +187,17 @@ void loop()
 {
     if (millis() - last_time > 200) {
         last_time = millis();
-        // Serial.print(encoder_count);
-        Serial.print(RPM);
+        Serial.print(encoder_count);
+        // Serial.print(RPM);
         Serial.print('\t');
-        Serial.print(output_vel);
+        // Serial.print(output_vel);
+        Serial.print(output_pos);
         Serial.print('\t');
-        Serial.print(abs(setpoint_vel - output_vel));
+        // Serial.print(abs(setpoint_vel - output_vel));
+        Serial.print(abs(setpoint_pos - output_pos));
         Serial.print('\t');
-        Serial.println(setpoint_vel);
+        // Serial.println(setpoint_vel);
+        Serial.println(setpoint_pos);
     }
     PID_Loop();
 }

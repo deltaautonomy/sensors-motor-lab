@@ -307,8 +307,8 @@ class StatePanel:
 class GUI(object):
     def __init__(self, master):
         # Main Window
-        self.width = 800
-        self.height = 920
+        self.width = 820
+        self.height = 645
         master.title("Sensors and Motors Lab  |  Delta Autonomy")
         master.geometry('%dx%d' % (self.width, self.height))
         master.resizable(width=False, height=False)
@@ -329,7 +329,7 @@ class GUI(object):
 
         # Left Panel
         self.lpanel = Frame(self.mpanel, width=170, height=self.height, pady=3)
-        self.lpanel.grid(row=0, column=0, rowspan=4)
+        self.lpanel.grid(row=0, column=0, rowspan=4, padx=10)
 
         #########################################################################################
 
@@ -410,48 +410,55 @@ class GUI(object):
 
         #########################################################################################
 
+        # Seperator
+        Separator(self.mpanel, orient=VERTICAL).grid(
+            row=0, column=1, rowspan=20, sticky=(N, S), padx=6
+        )
+
+        # Right Panel
+        self.rpanel = Frame(self.mpanel, width=170, height=self.height, pady=3)
+        self.rpanel.grid(row=0, column=2, rowspan=4)
+
         # State Panels
         self.state1_panel = StatePanel(
-            STATES[1], self.lpanel, row=11, column=0, width=170, padx=9
+            STATES[1], self.rpanel, row=0, column=0, width=170, padx=9
         )
         self.state2_panel = StatePanel(
-            STATES[2], self.lpanel, row=12, column=0, width=170, padx=9
+            STATES[2], self.rpanel, row=1, column=0, width=170, padx=9
+        )
+        self.state3_panel = StatePanel(
+            STATES[3], self.rpanel, row=2, column=0, width=170, padx=9
+        )
+        self.state4_panel = StatePanel(
+            STATES[4], self.rpanel, row=3, column=0, width=170, padx=9
         )
 
         #########################################################################################
 
         # Seperator
         Separator(self.mpanel, orient=VERTICAL).grid(
-            row=0, column=1, rowspan=20, sticky=(N, S), padx=6
+            row=0, column=3, rowspan=20, sticky=(N, S), padx=6
         )
-
-        #########################################################################################
 
         # Right Panel
-        self.rpanel = Frame(self.mpanel, width=170, height=self.height, pady=3)
-        self.rpanel.grid(row=0, column=2, rowspan=4)
-
-        #########################################################################################
+        self.r2panel = Frame(self.mpanel, width=170, height=self.height, pady=3)
+        self.r2panel.grid(row=0, column=4, rowspan=4)
 
         # State Panels
-        self.state3_panel = StatePanel(
-            STATES[3], self.rpanel, row=0, column=0, width=170, padx=9
-        )
-        self.state4_panel = StatePanel(
-            STATES[4], self.rpanel, row=1, column=0, width=170, padx=9
-        )
         self.state5_panel = StatePanel(
-            STATES[5], self.rpanel, row=2, column=0, width=170, padx=9
+            STATES[5], self.r2panel, row=0, column=0, width=170, padx=9
         )
         self.state6_panel = StatePanel(
-            STATES[6], self.rpanel, row=3, column=0, width=170, padx=9
+            STATES[6], self.r2panel, row=1, column=0, width=170, padx=9
         )
         self.state7_panel = StatePanel(
-            STATES[7], self.rpanel, row=4, column=0, width=170, padx=9
+            STATES[7], self.r2panel, row=2, column=0, width=170, padx=9
         )
         self.state8_panel = StatePanel(
-            STATES[8], self.rpanel, row=5, column=0, width=170, padx=9
+            STATES[8], self.r2panel, row=3, column=0, width=170, padx=9
         )
+
+        #########################################################################################
 
         self.current_state = STATES[0]
         self.state_panels = [
@@ -473,19 +480,6 @@ class GUI(object):
         )
 
         #########################################################################################
-
-        # Graph Panel
-        # Separator(self.mpanel, orient=HORIZONTAL).grid(row=0, column=4, sticky=(W, E))
-        # l3panel = Frame(self.mpanel, width=1000, height=10, pady=3)
-        # l3panel.grid(row=0, column=4)
-        # tlabel = Label(l3panel, text=" Interactive Terminal ")
-        # tlabel.pack()
-
-        # tpanel = Frame(self.mpanel, bg='#AAAAAA', width=550, height=565, pady=3)
-        # tpanel.grid(row=1, column=2)
-
-        # Insert Terminal
-        # wid = tpanel.winfo_id()
 
     def get_com_ports(self):
         # Linux

@@ -202,16 +202,16 @@ if __name__ == '__main__':
     packet.start('/dev/ttyACM0')
 
     # Recieve test
-    # while True:
-    #     packet.recieve()
+    while True:
+        packet.recieve()
 
     # Send test
-    packet.rx_global_switch = False
-    packet.rx_state = 10
-    packet.rx_servo_angle = 90
+    # packet.rx_global_switch = False
+    # packet.rx_state = 10
+    # packet.rx_servo_angle = 90
 
-    while True:
-        packet.send()
-        time.sleep(1)
+    # while True:
+    #     packet.send()
+    #     time.sleep(1)
 
     packet.close()

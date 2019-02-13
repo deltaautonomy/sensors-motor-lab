@@ -31,9 +31,10 @@ void loop() {
         Serial.println(rx_packet.state);
         Serial.println(rx_packet.servo_angle);
         Serial.println(rx_packet.motor_angle);
-        Serial.println(rx_packet.motor_kp);
-        Serial.println(rx_packet.motor_ki);
-        Serial.println(rx_packet.motor_kd);
+        Serial.println(rx_packet.motor_velocity);
+        Serial.println(rx_packet.stepper_value);
+        Serial.println(rx_packet.stepper_dir);
+        Serial.println(rx_packet.stepper_flag);
         Serial.println();
     }
 

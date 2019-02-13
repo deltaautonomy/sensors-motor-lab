@@ -25,14 +25,14 @@
 // Stepper motorservo
 #define step_stp 4
 #define step_dir 5
-#define step_MS1 3
+#define step_MS1 11 // 3
 #define step_MS2 48
 #define step_EN 46
 
 // DC Motor
 #define ENC_CH1 19 // Quadrature encoder A pin
 #define ENC_CH2 20 // Quadrature encoder B pin
-#define MOTOR_EN 44 // PWM outputs to L298N H-Bridge motor driver module
+#define MOTOR_EN 3 // PWM outputs to L298N H-Bridge motor driver module
 #define MOTOR_A1 51
 #define MOTOR_A2 53
 #define MIN_RPM 55
@@ -46,8 +46,8 @@
 #define flexpin A4
 #define photo_in 8
 #define photo_out A0
-#define TMP36     A1
-#define lv_Sonar  A3
+#define TMP36 A1
+#define lv_Sonar A3
 
 // Debug
 #define buttonPin 2
@@ -200,7 +200,6 @@ void button_isr()
 
 void servo_motor_control()
 {   
-    servo_motor.attach(SERVO_PIN);
     int servo_position;
     if (rx_packet.state == STATE_SERVO_GUI) {
         servo_position = rx_packet.servo_angle;
@@ -215,8 +214,7 @@ void servo_motor_control()
 
     // Actuate servo and wait
     tx_packet.servo_angle = (uint8_t)servo_position;
-    servo_motor.write(map(servo_position, 0, 180, 5, 175));
-    servo_motor.detach();
+    servo_motor.write(servo_position);
 }
 
 /************************** DC Motor **************************/
@@ -224,21 +222,20 @@ void servo_motor_control()
 void PID_Setup_Position()
 {
     position_PID.SetMode(AUTOMATIC);
-    position_PID.SetSampleTime(10);
+    position_PID.SetSampleTime(20);
     position_PID.SetOutputLimits(-255, 255);
 }
 
 void PID_Setup_Velocity()
 {
     velocity_PID.SetMode(AUTOMATIC);
-    velocity_PID.SetSampleTime(10);
+    velocity_PID.SetSampleTime(20);
     velocity_PID.SetOutputLimits(0, 255);
 }
 
 void pwmOut(int out)
 {
-    if (abs(out) < MIN_RPM) {
-        Set_Motor_Direction(0, 0);
+    if (abs(out) < 40) {
         analogWrite(MOTOR_EN, 0);
         return;
     }
@@ -278,11 +275,16 @@ void PID_Loop()
             int RawValue = analogRead(TMP36);
             float Voltage = map(RawValue, 0, 1023, 0, 5000); // 5000 to get millivots.
             float tempC = (Voltage - 500) * 0.1; // 500 is the offset
-            tempC = constrain(tempC, 25, 110);
+            tempC = constrain(tempC, 20, 120);
             tx_packet.temperature = (uint8_t)tempC;
 
+            // Pot
+            // setpoint_pos = analogRead(POTENTIOMETER_PIN); // modify to fit motor and encoder characteristics, potmeter connected to A0
+            // setpoint_pos = map(setpoint_pos, 0, 1024, -360 * ROT_FACTOR, 360 * ROT_FACTOR);
+            // setpoint_pos = map(setpoint_pos, -360 * ROT_FACTOR, 360 * ROT_FACTOR, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
+
             // Setpoint
-            setpoint_pos = map(tempC, 25, 110, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
+            setpoint_pos = map(tempC, 20, 120, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
         }
 
         if (rx_packet.state == STATE_DC_POS_GUI) {
@@ -310,7 +312,7 @@ void PID_Loop()
 
             // Setpoint
             setpoint_vel = constrain(ultrasonic_input, min_SONAR, max_SONAR);
-            setpoint_vel = map(setpoint_vel, min_SONAR, max_SONAR, 0, 110);
+            setpoint_vel = (double) map(setpoint_vel, min_SONAR, max_SONAR, 0, 125);
         }
 
         if (rx_packet.state == STATE_DC_VEL_GUI) {
@@ -377,6 +379,12 @@ void misc_setup()
     attachInterrupt(digitalPinToInterrupt(buttonPin), button_isr, CHANGE);
 }
 
+void sensor_setup()
+{
+    pinMode(lv_Sonar, INPUT);
+    pinMode(TMP36, INPUT);
+}
+
 void motor_setup()
 {
     pinMode(ENC_CH1, INPUT_PULLUP);
@@ -409,6 +417,8 @@ void setup()
     slot_encoder_setup();
     misc_setup();
     motor_setup();
+    sensor_setup();
+    servo_motor.attach(SERVO_PIN);
 
     Serial.begin(115200);
     delay(3000);
