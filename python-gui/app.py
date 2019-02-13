@@ -313,7 +313,7 @@ class GUI(object):
         master.geometry('%dx%d' % (self.width, self.height))
         master.resizable(width=False, height=False)
 
-        self.ICON_PATH = PATH + 'images/da_icon.png'
+        self.ICON_PATH = PATH + 'images/da_logo_resize.gif'
         self.imgicon = PhotoImage(file=self.ICON_PATH)
         master.tk.call('wm', 'iconphoto', master._w, self.imgicon)
 
@@ -337,7 +337,7 @@ class GUI(object):
         self.raisedFrame = Frame(self.lpanel, bd=3, relief=GROOVE)
         self.raisedFrame.grid(row=0, column=0)
 
-        self.logo = ImageTk.PhotoImage(Image.open(PATH + 'images/da_icon_resize.png'))
+        self.logo = ImageTk.PhotoImage(Image.open(PATH + 'images/da_logo_resize.gif'))
         self.logolabel = Label(self.raisedFrame, image=self.logo, width=205)
         self.logolabel.grid(row=0, column=0)
 
@@ -364,7 +364,7 @@ class GUI(object):
         )
         self.infolabel6.grid(row=3, column=0)
 
-        self.infotext = "Lorem Ipsum"
+        self.infotext = "Select the COM port and open it. Select any one of the eight states and click start demo to enable the corresponding state panel. You can now visualize the sensors data and control the actuators."
         self.infolabel4 = Label(
             self.lpanel, text=self.infotext, wraplength=205, font='"Consolas" 9'
         )
@@ -377,6 +377,8 @@ class GUI(object):
 
         self.comport = StringVar(master)
         self.comports = self.get_com_ports()
+        if not self.comports:
+            self.comports = ['No Devices Available']
         self.ddcom = OptionMenu(
             self.lpanel, self.comport, *self.comports, command=self.comport_select
         )
@@ -410,7 +412,7 @@ class GUI(object):
 
         #########################################################################################
 
-        # Seperator
+        # Separator
         Separator(self.mpanel, orient=VERTICAL).grid(
             row=0, column=1, rowspan=20, sticky=(N, S), padx=6
         )
@@ -423,11 +425,11 @@ class GUI(object):
         self.state1_panel = StatePanel(
             STATES[1], self.rpanel, row=0, column=0, width=170, padx=9
         )
-        self.state2_panel = StatePanel(
-            STATES[2], self.rpanel, row=1, column=0, width=170, padx=9
-        )
         self.state3_panel = StatePanel(
-            STATES[3], self.rpanel, row=2, column=0, width=170, padx=9
+            STATES[3], self.rpanel, row=1, column=0, width=170, padx=9
+        )
+        self.state2_panel = StatePanel(
+            STATES[2], self.rpanel, row=2, column=0, width=170, padx=9
         )
         self.state4_panel = StatePanel(
             STATES[4], self.rpanel, row=3, column=0, width=170, padx=9
@@ -435,7 +437,7 @@ class GUI(object):
 
         #########################################################################################
 
-        # Seperator
+        # Separator
         Separator(self.mpanel, orient=VERTICAL).grid(
             row=0, column=3, rowspan=20, sticky=(N, S), padx=6
         )
@@ -474,7 +476,7 @@ class GUI(object):
 
         #########################################################################################
 
-        # Seperator
+        # Separator
         Separator(self.mpanel, orient=VERTICAL).grid(
             row=0, column=3, rowspan=20, sticky=(N, S), padx=6
         )
@@ -565,6 +567,8 @@ if __name__ == '__main__':
     packet_listener_t.start()
 
     root = Tk()
+    root.wm_attributes('-type', 'splash')
+    # root.wm_attributes('-fullscreen','true')
     app = GUI(root)
     root.mainloop()
 
