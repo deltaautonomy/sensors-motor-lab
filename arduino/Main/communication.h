@@ -44,6 +44,7 @@ typedef struct RXDataPacket {
     // Stepper motor
     uint16_t stepper_value;
     uint8_t stepper_dir;
+    uint8_t stepper_flag;
 } __attribute__((__packed__));
 
 extern TXDataPacket tx_packet;

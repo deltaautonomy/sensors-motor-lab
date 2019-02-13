@@ -22,7 +22,7 @@
 #define STATE_SERVO_GUI 7
 #define STATE_SERVO_SENS 8
 
-// Stepper motor
+// Stepper motorservo
 #define step_stp 4
 #define step_dir 5
 #define step_MS1 3
@@ -46,17 +46,29 @@
 #define flexpin A4
 #define photo_in 8
 #define photo_out A0
+#define TMP36     A2
+#define lv_Sonar  A6
 
 // Debug
 #define buttonPin 2
-#define DEFAULT_LED 13
+#define DEFAULT_LED 32 
 
 /************************** Globals **************************/
 
-int circuitState = HIGH;
+bool circuitState = LOW;
 unsigned long lastDebounceTime = 0; // the last time the output pin was toggled
 unsigned long debounceDelay = 50; // the debounce time; increase if the output flickers
 unsigned long last_send_time = 0;
+
+// This is the room temperature reading of TMP36
+// TODO:
+int min_TMP = 22; 
+int max_TMP = 125; 
+
+// This is the reading of the SONAR sensor sensor
+// TODO:
+int min_SONAR = 10;
+int max_SONAR = 50;
 
 // ISR variables
 volatile double encoder_count = 0;
@@ -106,12 +118,18 @@ void StepperStep()
     }
 }
 
-//Stepper Function with Slot Encoder
-void StepperMain()
+uint8_t read_slot_encoder()
 {
     digitalWrite(photo_in, HIGH);
-    uint8_t val = analogRead(photo_out);
+    uint8_t val = constrain(analogRead(photo_out), 0, 100);
     tx_packet.slot_encoder = val;
+    return val;
+}
+
+// Stepper Function with Slot Encoder
+void StepperMain()
+{
+    uint8_t val = read_slot_encoder();
 
     if (val > 5) {
         digitalWrite(step_EN, LOW); // Pull enable pin low to allow motor control
@@ -122,23 +140,27 @@ void StepperMain()
     resetStepperPins();
 }
 
-//Microstep function for stepper
+// Microstep function for stepper
 void StepperPosStep(uint8_t angle, uint8_t dir)
 {
+    if (!rx_packet.stepper_flag) return;
+
     if (dir == 0) {
-        digitalWrite(step_dir, HIGH); //Pull direction pin low to move "forward" and high to move "reverse"
+        digitalWrite(step_dir, HIGH); // Pull direction pin low to move "forward" and high to move "reverse"
     } else {
         digitalWrite(step_dir, LOW);
     }
 
-    int t = map(angle, 0, 360, 1, 1600);
-    for (int x = 1; x < t; x++) //Loop the forward stepping enough times for motion to be visible
+    int t = map(angle, 0, 360, 1, 200);
+    for (int x = 1; x < t; x++) // Loop the forward stepping enough times for motion to be visible
     {
-        digitalWrite(step_stp, HIGH); //Trigger one step forward
+        digitalWrite(step_stp, HIGH); // Trigger one step forward
         delay(1);
-        digitalWrite(step_stp, LOW); //Pull step pin low so it can be triggered again
+        digitalWrite(step_stp, LOW); // Pull step pin low so it can be triggered again
         delay(1);
     }
+
+    rx_packet.stepper_flag = 0;
 }
 
 // Stepper function for position control
@@ -146,8 +168,9 @@ void StepperPos()
 {
     uint16_t angle = rx_packet.stepper_value;
     uint8_t dir = rx_packet.stepper_dir;
-    //tx_packet.slot_encoder  = val;
-    digitalWrite(step_EN, LOW); //Pull enable pin low to allow motor control
+    read_slot_encoder();
+
+    digitalWrite(step_EN, LOW); // Pull enable pin low to allow motor control
     StepperPosStep(angle, dir);
     resetStepperPins();
 }
@@ -171,6 +194,7 @@ void button_isr()
     if (button.state && (millis() - button.time > debounceDelay)) {
         button.time = millis();
         circuitState = !circuitState;
+        digitalWrite(DEFAULT_LED, circuitState);
     }
 
     button.last_state = button.state;
@@ -182,22 +206,21 @@ void button_isr()
 
 void servo_motor_control()
 {
-
+    int servo_position;
     if (rx_packet.state == STATE_SERVO_GUI) {
-        int servo_position = rx_packet.servo_angle;
+        servo_position = rx_packet.servo_angle;
     } else if (rx_packet.state == STATE_SERVO_SENS) {
         // Read flex sensor
         uint16_t flex_position = analogRead(flexpin);
-        tx_packet.flex_sensor = flex_position;
+        tx_packet.flex_sensor = 1023 - flex_position;
 
-        int servo_position = map(flex_position, 10, 1023, 0, 90);
+        servo_position = map(flex_position, 0, 1023, 90, 0);
         servo_position = constrain(servo_position, 0, 90);
     }
 
     // Actuate servo and wait
     tx_packet.servo_angle = (uint8_t)servo_position;
-    servo_motor.write(servo_position);
-    delay(1000);
+    servo_motor.write(map(servo_position, 0, 180, 5, 175));
 }
 
 /************************** DC Motor **************************/
@@ -247,16 +270,16 @@ void Encoder_ISR()
 void PID_Loop()
 {
     // If state is to control position using Main OR GUI
-    if (state == PositionMain || state == PositionGUI) {
+    if (rx_packet.state == STATE_DC_POS_SENS || rx_packet.state == STATE_DC_POS_GUI) {
         // Get setpoint
-        if (state == PositionMain) {
+        if (rx_packet.state == STATE_DC_POS_SENS) {
             // Modify to fit motor and encoder characteristics, potmeter connected to A15
-            setpoint_pos = analogRead(POTENTIOMETER_PIN);
-            setpoint_pos = map(setpoint_pos, 0, 1024, -360 * ROT_FACTOR, 360 * ROT_FACTOR);
+            setpoint_pos = analogRead(TMP36);
+            setpoint_pos = map(setpoint_pos, min_TMP, max_TMP, -360 * ROT_FACTOR, 360 * ROT_FACTOR);
             setpoint_pos = map(setpoint_pos, -360 * ROT_FACTOR, 360 * ROT_FACTOR, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
         }
 
-        if (state == PositionGUI) {
+        if (rx_packet.state == STATE_DC_POS_GUI) {
             // Get setpoint from GUI
             setpoint_pos = (double)rx_packet.motor_angle;
         }
@@ -271,14 +294,17 @@ void PID_Loop()
         pwmOut(output_pos);
     }
 
-    else if (state == VelocityMain || state == VelocityGUI) {
+    else if (rx_packet.state == STATE_DC_VEL_SENS || rx_packet.state == STATE_DC_VEL_GUI) {
         // Get setpoint
-        if (state == VelocityMain) {
-            setpoint_vel = analogRead(POTENTIOMETER_PIN);
-            setpoint_vel = map(setpoint_vel, 0, 1024, -110, 110);
+        if (rx_packet.state == STATE_DC_VEL_SENS) {
+            setpoint_vel = analogRead(lv_Sonar);
+            setpoint_vel = map(setpoint_vel, min_SONAR, max_SONAR, -110, 110); 
+
+            // Add filter to SONAR Reading
+            // TODO: Maybe add filter thresholds 
         }
 
-        if (state == VelocityGUI) {
+        if (rx_packet.state == STATE_DC_VEL_GUI) {
             // Get setpoint from GUI
             setpoint_vel = (double)rx_packet.motor_velocity;
         }
@@ -388,6 +414,13 @@ void setup()
     motor_setup();
 
     Serial.begin(115200);
+    rx_packet.state = STATE_STEPPER_GUI;
+    rx_packet.stepper_dir = 0;
+    rx_packet.stepper_value = 180;
+    rx_packet.stepper_flag = 1;
+    // rx_packet.servo_angle = 180;
+    rx_packet.global_switch = 1;
+    delay(4000);
 }
 
 //Main loop
