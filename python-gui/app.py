@@ -38,6 +38,7 @@ GUI_CLOSED = False
 
 # Arduino packet object
 arduino = Packet()
+last_time = time.time()
 
 STATES = [
     'Reserved',
@@ -50,6 +51,13 @@ STATES = [
     'Servo Motor (GUI)',
     'Servo Motor (Sensor)',
 ]
+
+
+def arduino_send():
+    global last_time
+    if (time.time() - last_time) > 0.005 and arduino.is_open:
+        last_time = time.time()
+        arduino.send()
 
 
 class SensorPanel:
@@ -76,7 +84,7 @@ class SensorPanel:
     def set_sensor_value(self, value):
         self.pb['value'] = map_value(value, self.min_val, self.max_val)
         self.value_label.delete(0, END)
-        self.value_label.insert(0, value)
+        self.value_label.insert(0, '%.2f' % value)
 
 
 class SliderPanel:
@@ -90,15 +98,23 @@ class SliderPanel:
         self.panel = Frame(parent, width=170, pady=3)
         self.name_label = Label(self.panel, text=name)
         self.name_label.grid(row=0, column=0, padx=6, sticky=(S))
-        self.slider = Scale(self.panel, from_=min_val, to=max_val,
-            orient=HORIZONTAL, length=140, command=func)
+        self.slider = Scale(
+            self.panel,
+            from_=min_val,
+            to=max_val,
+            orient=HORIZONTAL,
+            length=140,
+            command=func,
+        )
         self.slider.grid(row=0, column=1, sticky=(W, E))
         self.panel.grid(row=row, column=column, padx=padx)
 
 
 class SectionTitle:
     def __init__(self, title, parent, row, column, width, top=10, bottom=10):
-        Separator(parent, orient=HORIZONTAL).grid(row=row, column=column, pady=(top, bottom), sticky=(W, E))
+        Separator(parent, orient=HORIZONTAL).grid(
+            row=row, column=column, pady=(top, bottom), sticky=(W, E)
+        )
         self.panel = Frame(parent, width=width, height=10)
         self.panel.grid(row=row, column=column)
         self.label = Label(self.panel, text=" %s " % title)
@@ -107,87 +123,191 @@ class SectionTitle:
 
 class StatePanel:
     def __init__(self, state, parent, row, column, width, padx):
-        self.last_time =
         self.state_index = STATES.index(state)
         self.panel = Frame(parent, width=width, pady=3)
         self.raisedPanel = Frame(self.panel, width=width, pady=3, bd=1, relief=RAISED)
         SectionTitle(state, self.panel, row=0, column=0, width=170)
 
         if self.state_index == 1:
-            self.slider1 = SliderPanel('Angle', -360, 360, self.raisedPanel, row=0, column=0, padx=9, func=self.control_dcmotor_pos)
-            self.sensor1 = SensorPanel('Encoder Position (Ticks)', -10000, 10000, self.raisedPanel, row=1, column=0, padx=9)
+            self.slider1 = SliderPanel(
+                'Angle',
+                -360,
+                360,
+                self.raisedPanel,
+                row=0,
+                column=0,
+                padx=9,
+                func=self.control_dcmotor_pos,
+            )
+            self.sensor1 = SensorPanel(
+                'Encoder Position (Ticks)',
+                -10000,
+                10000,
+                self.raisedPanel,
+                row=1,
+                column=0,
+                padx=9,
+            )
 
         elif self.state_index == 2:
-            self.slider1 = SliderPanel('Velocity', -110, 110, self.raisedPanel, row=0, column=0, padx=9, func=self.control_dcmotor_vel)
-            self.sensor1 = SensorPanel('Encoder Velocity (RPM)', -110, 110, self.raisedPanel, row=1, column=0, padx=9)
+            self.slider1 = SliderPanel(
+                'Velocity',
+                0,
+                110,
+                self.raisedPanel,
+                row=0,
+                column=0,
+                padx=9,
+                func=self.control_dcmotor_vel,
+            )
+            self.sensor1 = SensorPanel(
+                'Encoder Velocity (RPM)',
+                -110,
+                110,
+                self.raisedPanel,
+                row=1,
+                column=0,
+                padx=9,
+            )
 
         elif self.state_index == 3:
-            self.sensor1 = SensorPanel('Encoder Position (Ticks)', -10000, 10000, self.raisedPanel, row=0, column=0, padx=9)
-            self.sensor2 = SensorPanel('Temperature Sensor (C)', 0, 200, self.raisedPanel, row=1, column=0, padx=9)
+            self.sensor1 = SensorPanel(
+                'Encoder Position (Ticks)',
+                -1000000,
+                1000000,
+                self.raisedPanel,
+                row=0,
+                column=0,
+                padx=9,
+            )
+            self.sensor2 = SensorPanel(
+                'Temperature Sensor (C)',
+                0,
+                200,
+                self.raisedPanel,
+                row=1,
+                column=0,
+                padx=9,
+            )
 
         elif self.state_index == 4:
-            self.sensor1 = SensorPanel('Encoder Velocity (RPM)', -110, 110, self.raisedPanel, row=0, column=0, padx=9)
-            self.sensor2 = SensorPanel('Ultrasonic Sensor (m)', 0, 5, self.raisedPanel, row=1, column=0, padx=9)
+            self.sensor1 = SensorPanel(
+                'Encoder Velocity (RPM)',
+                -110,
+                110,
+                self.raisedPanel,
+                row=0,
+                column=0,
+                padx=9,
+            )
+            self.sensor2 = SensorPanel(
+                'Ultrasonic Sensor (inches)',
+                6,
+                24,
+                self.raisedPanel,
+                row=1,
+                column=0,
+                padx=9,
+            )
 
         elif self.state_index == 5:
-            self.slider1 = SliderPanel('Angle', 0, 360, self.raisedPanel, row=0, column=0, padx=9, func=self.control_stepper_pos)
-            self.slider2 = SliderPanel('Direction', 0, 1, self.raisedPanel, row=1, column=0, padx=9, func=self.control_stepper_dir)
-            self.sensor1 = SensorPanel('Slot Encoder', 0, 1, self.raisedPanel, row=2, column=0, padx=9)
-            self.button = Button(self.raisedPanel, text="Set Angle", command=self.set_stepper_flag, pady=4, width=24)
-            self.button.grid(row=3, column=0)
+            self.slider1 = SliderPanel(
+                'Angle',
+                0,
+                360,
+                self.raisedPanel,
+                row=0,
+                column=0,
+                padx=9,
+                func=self.control_stepper_pos,
+            )
+            self.slider2 = SliderPanel(
+                'Direction',
+                0,
+                1,
+                self.raisedPanel,
+                row=1,
+                column=0,
+                padx=9,
+                func=self.control_stepper_dir,
+            )
+            self.sensor1 = SensorPanel(
+                'Slot Encoder', 0, 1, self.raisedPanel, row=2, column=0, padx=9
+            )
+            self.button = Button(
+                self.raisedPanel,
+                text="Set Angle",
+                command=self.set_stepper_flag,
+                pady=4,
+                width=24,
+            )
+            self.button.grid(row=3, column=0, pady=3)
 
         elif self.state_index == 6:
-            self.sensor1 = SensorPanel('Slot Encoder', 0, 1, self.raisedPanel, row=1, column=0, padx=9)
+            self.sensor1 = SensorPanel(
+                'Slot Encoder', 0, 1, self.raisedPanel, row=1, column=0, padx=9
+            )
 
         elif self.state_index == 7:
-            self.slider1 = SliderPanel('Angle', 0, 90, self.raisedPanel, row=0, column=0, padx=9, func=self.control_servo)
-            self.sensor1 = SensorPanel('Flex Sensor', 0, 1024, self.raisedPanel, row=1, column=0, padx=9)
+            self.slider1 = SliderPanel(
+                'Angle',
+                0,
+                90,
+                self.raisedPanel,
+                row=0,
+                column=0,
+                padx=9,
+                func=self.control_servo,
+            )
+            self.sensor1 = SensorPanel(
+                'Flex Sensor', 0, 1024, self.raisedPanel, row=1, column=0, padx=9
+            )
 
         elif self.state_index == 8:
-            self.sensor1 = SensorPanel('Flex Sensor', 0, 1024, self.raisedPanel, row=1, column=0, padx=9)
+            self.sensor1 = SensorPanel(
+                'Flex Sensor', 0, 1024, self.raisedPanel, row=1, column=0, padx=9
+            )
 
         self.raisedPanel.grid(row=1, column=0, padx=padx)
         self.panel.grid(row=row, column=column, padx=padx)
         self.configure_state(self.raisedPanel, state=DISABLED)
 
     def control_servo(self, value):
-        print('Sending servo:', value)
-        arduino.rx_servo_angle = value
-        arduino.send()
+        arduino.rx_servo_angle = int(value)
+        arduino_send()
 
     def control_stepper_pos(self, value):
-        print('Sending stepper_pos:', value)
-        arduino.rx_stepper_value = value
+        arduino.rx_stepper_value = int(value)
 
     def control_stepper_dir(self, value):
-        print('Sending stepper_dir:', value)
-        arduino.rx_stepper_dir = value
+        arduino.rx_stepper_dir = int(value)
 
-    def set_stepper_flag(self, value):
-        print('Sending ')
-        arduino.send()
+    def set_stepper_flag(self):
+        arduino.rx_stepper_flag = 1
+        arduino_send()
 
     def control_dcmotor_pos(self, value):
-        print('Sending dcmotor_pos:', value)
-        arduino.rx_motor_angle = value
-        arduino.send()
+        arduino.rx_motor_angle = int(value)
+        arduino_send()
 
     def control_dcmotor_vel(self, value):
-        print('Sending dcmotor_vel:', value)
-        arduino.rx_motor_velocity = value
-        arduino.send()
+        arduino.rx_motor_velocity = int(value)
+        arduino_send()
 
     def configure_state(self, frame, state):
         for child in frame.winfo_children():
-            if type(child) == Frame: self.configure_state(child, state)
-            elif type(child) == Progressbar: continue
-            else: child.configure(state=state)
+            if type(child) == Frame:
+                self.configure_state(child, state)
+            elif type(child) == Progressbar:
+                continue
+            else:
+                child.configure(state=state)
 
 
 class GUI(object):
     def __init__(self, master):
         # Main Window
-        self.width = 1100
+        self.width = 800
         self.height = 920
         master.title("Sensors and Motors Lab  |  Delta Autonomy")
         master.geometry('%dx%d' % (self.width, self.height))
@@ -200,7 +320,9 @@ class GUI(object):
         #########################################################################################
 
         # Master Panel
-        self.mpanel = Frame(master, width=self.width, height=self.height, padx=5, pady=4)
+        self.mpanel = Frame(
+            master, width=self.width, height=self.height, padx=5, pady=4
+        )
         self.mpanel.pack()
 
         #########################################################################################
@@ -289,13 +411,19 @@ class GUI(object):
         #########################################################################################
 
         # State Panels
-        self.state1_panel = StatePanel(STATES[1], self.lpanel, row=11, column=0, width=170, padx=9)
-        self.state2_panel = StatePanel(STATES[2], self.lpanel, row=12, column=0, width=170, padx=9)
+        self.state1_panel = StatePanel(
+            STATES[1], self.lpanel, row=11, column=0, width=170, padx=9
+        )
+        self.state2_panel = StatePanel(
+            STATES[2], self.lpanel, row=12, column=0, width=170, padx=9
+        )
 
         #########################################################################################
 
         # Seperator
-        Separator(self.mpanel, orient=VERTICAL).grid(row=0, column=1, rowspan=20, sticky=(N, S), padx=6)
+        Separator(self.mpanel, orient=VERTICAL).grid(
+            row=0, column=1, rowspan=20, sticky=(N, S), padx=6
+        )
 
         #########################################################################################
 
@@ -306,21 +434,43 @@ class GUI(object):
         #########################################################################################
 
         # State Panels
-        self.state3_panel = StatePanel(STATES[3], self.rpanel, row=0, column=0, width=170, padx=9)
-        self.state4_panel = StatePanel(STATES[4], self.rpanel, row=1, column=0, width=170, padx=9)
-        self.state5_panel = StatePanel(STATES[5], self.rpanel, row=2, column=0, width=170, padx=9)
-        self.state6_panel = StatePanel(STATES[6], self.rpanel, row=3, column=0, width=170, padx=9)
-        self.state7_panel = StatePanel(STATES[7], self.rpanel, row=4, column=0, width=170, padx=9)
-        self.state8_panel = StatePanel(STATES[8], self.rpanel, row=5, column=0, width=170, padx=9)
+        self.state3_panel = StatePanel(
+            STATES[3], self.rpanel, row=0, column=0, width=170, padx=9
+        )
+        self.state4_panel = StatePanel(
+            STATES[4], self.rpanel, row=1, column=0, width=170, padx=9
+        )
+        self.state5_panel = StatePanel(
+            STATES[5], self.rpanel, row=2, column=0, width=170, padx=9
+        )
+        self.state6_panel = StatePanel(
+            STATES[6], self.rpanel, row=3, column=0, width=170, padx=9
+        )
+        self.state7_panel = StatePanel(
+            STATES[7], self.rpanel, row=4, column=0, width=170, padx=9
+        )
+        self.state8_panel = StatePanel(
+            STATES[8], self.rpanel, row=5, column=0, width=170, padx=9
+        )
 
         self.current_state = STATES[0]
-        self.state_panels = [self.state1_panel, self.state2_panel, self.state3_panel, self.state4_panel, 
-                             self.state5_panel, self.state6_panel, self.state7_panel, self.state8_panel]
+        self.state_panels = [
+            self.state1_panel,
+            self.state2_panel,
+            self.state3_panel,
+            self.state4_panel,
+            self.state5_panel,
+            self.state6_panel,
+            self.state7_panel,
+            self.state8_panel,
+        ]
 
         #########################################################################################
 
         # Seperator
-        Separator(self.mpanel, orient=VERTICAL).grid(row=0, column=3, rowspan=20, sticky=(N, S), padx=6)
+        Separator(self.mpanel, orient=VERTICAL).grid(
+            row=0, column=3, rowspan=20, sticky=(N, S), padx=6
+        )
 
         #########################################################################################
 
@@ -339,7 +489,7 @@ class GUI(object):
 
     def get_com_ports(self):
         # Linux
-        return glob.glob('tty[AU]*')  # return glob.glob('/dev/tty[AU]*')
+        return glob.glob('/dev/tty[AU]*')
 
     def comport_select(self, port):
         print('Port changed:', port)
@@ -355,9 +505,13 @@ class GUI(object):
         if self.b1['text'] == 'Close Port':
             self.b1['text'] = 'Open Port'
             self.ddcom.configure(state=NORMAL)
+            arduino.close()
+
         elif self.b1['text'] == 'Open Port':
             self.b1['text'] = 'Close Port'
             self.ddcom.configure(state=DISABLED)
+            print('Opening Port:', str(self.comport.get()))
+            arduino.start(str(self.comport.get()))
 
     def b2_clicked(self):
         print('B2 Clicked')
@@ -366,26 +520,50 @@ class GUI(object):
             self.ddstate.configure(state=NORMAL)
             state_index = STATES.index(self.current_state)
             if state_index:
-                self.state_panels[state_index-1].configure_state(self.state_panels[state_index-1].raisedPanel, state=DISABLED)
-        
+                self.state_panels[state_index - 1].configure_state(
+                    self.state_panels[state_index - 1].raisedPanel, state=DISABLED
+                )
+            arduino.rx_global_switch = 0
+            arduino.rx_state = state_index
+            arduino_send()
+
         elif self.b2['text'] == 'Start Demo':
             self.b2['text'] = 'Stop Demo'
             self.ddstate.configure(state=DISABLED)
             state_index = STATES.index(self.current_state)
             if state_index:
-                self.state_panels[state_index-1].configure_state(self.state_panels[state_index-1].raisedPanel, state=NORMAL)
+                self.state_panels[state_index - 1].configure_state(
+                    self.state_panels[state_index - 1].raisedPanel, state=NORMAL
+                )
+            arduino.rx_global_switch = 1
+            arduino.rx_state = state_index
+            arduino_send()
 
-    
+    def update_data(self):
+        self.state1_panel.sensor1.set_sensor_value(arduino.tx_encoder['encoder_count'])
+        self.state2_panel.sensor1.set_sensor_value(
+            arduino.tx_encoder['encoder_velocity']
+        )
+        self.state3_panel.sensor1.set_sensor_value(arduino.tx_encoder['encoder_count'])
+        self.state3_panel.sensor2.set_sensor_value(arduino.tx_temperature)
+        self.state4_panel.sensor1.set_sensor_value(
+            arduino.tx_encoder['encoder_velocity']
+        )
+        self.state4_panel.sensor2.set_sensor_value(arduino.tx_ultrasonic_distance)
+        self.state5_panel.sensor1.set_sensor_value(int(bool(arduino.tx_slot_encoder)))
+        self.state6_panel.sensor1.set_sensor_value(int(bool(arduino.tx_slot_encoder)))
+        self.state7_panel.sensor1.set_sensor_value(arduino.tx_flex_sensor)
+        self.state8_panel.sensor1.set_sensor_value(arduino.tx_flex_sensor)
+
+
 def packet_listener():
-    count = 0
+    global app
+    time.sleep(2)
     while not GUI_CLOSED:
-        if app:
-            try:
-                pass
-            except AttributeError:
-                pass
-            count += 1
-        time.sleep(0.1)
+        if arduino.is_open and arduino.recieve():
+            app.update_data()
+        else:
+            time.sleep(0.1)
 
 
 if __name__ == '__main__':

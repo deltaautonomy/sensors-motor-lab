@@ -83,7 +83,6 @@ class Packet:
         # Send data
         try:
             self.ser.write(tx_frame)
-            print(tx_frame)
 
         except Exception as error:
             print(error)
@@ -150,13 +149,13 @@ class Packet:
             self.rx_state,
             self.rx_servo_angle,
             self.rx_motor_angle,
-            self.rx_motor_velocity
+            self.rx_motor_velocity,
             self.rx_stepper_value,
             self.rx_stepper_dir,
             self.rx_stepper_flag,
         ]
 
-        self.send_packet(data, '<BBBhhHB')
+        self.send_packet(data, '<BBBhhHBB')
 
     def recieve(self, delay=0.2, max_retries=5):
         data = None
@@ -166,10 +165,10 @@ class Packet:
                 return False
             time.sleep(delay)
             retries += 1
-            data = self.recieve_packet('<BifBHHBB', 16)
+            data = self.recieve_packet('<BifBHHB', 15)
 
         self.parse_data(data)
-        self.display()
+        # self.display()
         return True
 
     def parse_data(self, data):
@@ -203,20 +202,16 @@ if __name__ == '__main__':
     packet.start('/dev/ttyACM0')
 
     # Recieve test
-    while True:
-        packet.recieve()
+    # while True:
+    #     packet.recieve()
 
     # Send test
-    # packet.rx_global_switch = False
-    # packet.rx_state = 10
-    # packet.rx_servo_angle = 90
-    # packet.rx_motor_angle = 100
-    # packet.rx_motor_PID['kp'] = 20
-    # packet.rx_motor_PID['ki'] = 30
-    # packet.rx_motor_PID['kd'] = 40
+    packet.rx_global_switch = False
+    packet.rx_state = 10
+    packet.rx_servo_angle = 90
 
-    # while True:
-    #     packet.send()
-    #     time.sleep(1)
+    while True:
+        packet.send()
+        time.sleep(1)
 
     packet.close()

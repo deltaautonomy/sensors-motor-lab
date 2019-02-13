@@ -8,7 +8,6 @@
 #include "communication.h"
 #include <PID_v1.h>
 #include <Servo.h>
-#include "fastMedian.h"
 
 /************************** Macros **************************/
 
@@ -104,7 +103,7 @@ void resetStepperPins()
 //Microstep function for stepper
 void StepperStep()
 {
-    for (int x = 1; x < 1000; x++) // Loop the forward stepping enough times for motion to be visible
+    for (int x = 1; x < 50; x++) // Loop the forward stepping enough times for motion to be visible
     {
         digitalWrite(step_stp, HIGH); // Trigger one step forward
         delay(1);
@@ -136,7 +135,7 @@ void StepperMain()
 }
 
 // Microstep function for stepper
-void StepperPosStep(uint8_t angle, uint8_t dir)
+void StepperPosStep(uint16_t angle, uint8_t dir)
 {
     if (!rx_packet.stepper_flag) return;
 
@@ -412,13 +411,7 @@ void setup()
     motor_setup();
 
     Serial.begin(115200);
-    rx_packet.state = STATE_DC_POS_SENS;
-    //rx_packet.stepper_dir = 0;
-    //rx_packet.stepper_value = 180;
-    //rx_packet.stepper_flag = 1;
-    // rx_packet.servo_angle = 180;
-    rx_packet.global_switch = 1;
-    delay(4000);
+    delay(3000);
 }
 
 //Main loop
@@ -430,6 +423,7 @@ void loop()
     if (rx_packet.global_switch && circuitState) {
         switch (rx_packet.state) {
         case STATE_RESERVED:
+            pwmOut(0);
             break;
 
         case STATE_DC_POS_GUI:
@@ -440,21 +434,26 @@ void loop()
             break;
 
         case STATE_STEPPER_GUI:
+            pwmOut(0);
             StepperPos();
             break;
 
         case STATE_STEPPER_SENS:
+            pwmOut(0);
             StepperMain();
             break;
 
         case STATE_SERVO_GUI:
         case STATE_SERVO_SENS:
+            pwmOut(0);
             servo_motor_control();
             break;
 
         default:
             break;
         }
+    } else {
+        pwmOut(0);
     }
 
     // Send data to GUI
