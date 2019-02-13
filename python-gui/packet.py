@@ -21,9 +21,10 @@ class Packet:
         self.rx_state = 0
         self.rx_servo_angle = 0
         self.rx_motor_angle = 0
-        self.stepper_value = 0
-        self.stepper_dir = 0
-        self.stepper_flag = False
+        self.rx_motor_velocity = 0
+        self.rx_stepper_value = 0
+        self.rx_stepper_dir = 0
+        self.rx_stepper_flag = False
 
     def start(self, com_port, baud=115200, timeout=0):
         # Configure serial port
@@ -149,12 +150,10 @@ class Packet:
             self.rx_state,
             self.rx_servo_angle,
             self.rx_motor_angle,
-            self.rx_motor_PID['kp'],
-            self.rx_motor_PID['ki'],
-            self.rx_motor_PID['kd'],
-            self.stepper_value,
-            self.stepper_dir,
-            self.stepper_flag,
+            self.rx_motor_velocity
+            self.rx_stepper_value,
+            self.rx_stepper_dir,
+            self.rx_stepper_flag,
         ]
 
         self.send_packet(data, '<BBBhhHB')
