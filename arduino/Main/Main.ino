@@ -8,6 +8,7 @@
 #include "communication.h"
 #include <PID_v1.h>
 #include <Servo.h>
+#include "fastMedian.h"
 
 /************************** Macros **************************/
 
@@ -46,8 +47,8 @@
 #define flexpin A4
 #define photo_in 8
 #define photo_out A0
-#define TMP36     A2
-#define lv_Sonar  A6
+#define TMP36     A1
+#define lv_Sonar  A3
 
 // Debug
 #define buttonPin 2
@@ -60,15 +61,9 @@ unsigned long lastDebounceTime = 0; // the last time the output pin was toggled
 unsigned long debounceDelay = 50; // the debounce time; increase if the output flickers
 unsigned long last_send_time = 0;
 
-// This is the room temperature reading of TMP36
-// TODO:
-int min_TMP = 22; 
-int max_TMP = 125; 
-
 // This is the reading of the SONAR sensor sensor
-// TODO:
-int min_SONAR = 10;
-int max_SONAR = 50;
+int min_SONAR = 6;
+int max_SONAR = 24;
 
 // ISR variables
 volatile double encoder_count = 0;
@@ -205,7 +200,8 @@ void button_isr()
 /************************** Servo **************************/
 
 void servo_motor_control()
-{
+{   
+    servo_motor.attach(SERVO_PIN);
     int servo_position;
     if (rx_packet.state == STATE_SERVO_GUI) {
         servo_position = rx_packet.servo_angle;
@@ -221,6 +217,7 @@ void servo_motor_control()
     // Actuate servo and wait
     tx_packet.servo_angle = (uint8_t)servo_position;
     servo_motor.write(map(servo_position, 0, 180, 5, 175));
+    servo_motor.detach();
 }
 
 /************************** DC Motor **************************/
@@ -236,11 +233,16 @@ void PID_Setup_Velocity()
 {
     velocity_PID.SetMode(AUTOMATIC);
     velocity_PID.SetSampleTime(10);
-    velocity_PID.SetOutputLimits(-255, 255);
+    velocity_PID.SetOutputLimits(0, 255);
 }
 
 void pwmOut(int out)
 {
+    if (abs(out) < MIN_RPM) {
+        Set_Motor_Direction(0, 0);
+        analogWrite(MOTOR_EN, 0);
+        return;
+    }
     if (out > 0) {
         Set_Motor_Direction(0, 1);
     } else {
@@ -274,14 +276,20 @@ void PID_Loop()
         // Get setpoint
         if (rx_packet.state == STATE_DC_POS_SENS) {
             // Modify to fit motor and encoder characteristics, potmeter connected to A15
-            setpoint_pos = analogRead(TMP36);
-            setpoint_pos = map(setpoint_pos, min_TMP, max_TMP, -360 * ROT_FACTOR, 360 * ROT_FACTOR);
-            setpoint_pos = map(setpoint_pos, -360 * ROT_FACTOR, 360 * ROT_FACTOR, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
+            int RawValue = analogRead(TMP36);
+            float Voltage = map(RawValue, 0, 1023, 0, 5000); // 5000 to get millivots.
+            float tempC = (Voltage - 500) * 0.1; // 500 is the offset
+            tempC = constrain(tempC, 25, 110);
+            tx_packet.temperature = (uint8_t)tempC;
+
+            // Setpoint
+            setpoint_pos = map(tempC, 25, 110, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
         }
 
         if (rx_packet.state == STATE_DC_POS_GUI) {
             // Get setpoint from GUI
             setpoint_pos = (double)rx_packet.motor_angle;
+            setpoint_pos = map(setpoint_pos, -360 * ROT_FACTOR, 360 * ROT_FACTOR, -378 * ROT_FACTOR, 378 * ROT_FACTOR);
         }
 
         // Get input
@@ -297,11 +305,13 @@ void PID_Loop()
     else if (rx_packet.state == STATE_DC_VEL_SENS || rx_packet.state == STATE_DC_VEL_GUI) {
         // Get setpoint
         if (rx_packet.state == STATE_DC_VEL_SENS) {
-            setpoint_vel = analogRead(lv_Sonar);
-            setpoint_vel = map(setpoint_vel, min_SONAR, max_SONAR, -110, 110); 
+            // Read SONAR
+            uint16_t ultrasonic_input = analogRead(lv_Sonar);
+            tx_packet.ultrasonic_distance = ultrasonic_input;
 
-            // Add filter to SONAR Reading
-            // TODO: Maybe add filter thresholds 
+            // Setpoint
+            setpoint_vel = constrain(ultrasonic_input, min_SONAR, max_SONAR);
+            setpoint_vel = map(setpoint_vel, min_SONAR, max_SONAR, 0, 110);
         }
 
         if (rx_packet.state == STATE_DC_VEL_GUI) {
@@ -339,18 +349,7 @@ void timer4_callback()
     tx_packet.encoder_velocity = (float)RPM;
 }
 
-/************************** ADC Sensors **************************/
-
-// TODO: Set these variables
-// tx_packet.ultrasonic_distance
-// tx_packet.flex_sensor
-
 /************************** Setup **************************/
-
-void servo_setup()
-{
-    servo_motor.attach(SERVO_PIN);
-}
 
 void stepper_setup()
 {
@@ -401,23 +400,22 @@ void motor_setup()
     Timer4.initialize(20000);
     Timer4.attachInterrupt(timer4_callback);
 
-    // PID_Setup_Position();
+    PID_Setup_Position();
     PID_Setup_Velocity();
 }
 
 void setup()
 {
-    servo_setup();
     stepper_setup();
     slot_encoder_setup();
     misc_setup();
     motor_setup();
 
     Serial.begin(115200);
-    rx_packet.state = STATE_STEPPER_GUI;
-    rx_packet.stepper_dir = 0;
-    rx_packet.stepper_value = 180;
-    rx_packet.stepper_flag = 1;
+    rx_packet.state = STATE_DC_POS_SENS;
+    //rx_packet.stepper_dir = 0;
+    //rx_packet.stepper_value = 180;
+    //rx_packet.stepper_flag = 1;
     // rx_packet.servo_angle = 180;
     rx_packet.global_switch = 1;
     delay(4000);
