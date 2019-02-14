@@ -30,6 +30,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils import *
 from packet import Packet
 
+# Globals
 PATH = os.path.dirname(os.path.abspath(__file__)) + '/'
 HOME_PATH = os.path.expanduser('~') + '/'
 
@@ -52,12 +53,21 @@ STATES = [
     'Servo Motor (Sensor)',
 ]
 
+'''
+Function wrapper to send data packet to arduino
+'''
+
 
 def arduino_send():
     global last_time
     if (time.time() - last_time) > 0.005 and arduino.is_open:
         last_time = time.time()
         arduino.send()
+
+
+'''
+Class to handle the sensor panel using a progress bar
+'''
 
 
 class SensorPanel:
@@ -87,6 +97,11 @@ class SensorPanel:
         self.value_label.insert(0, '%.2f' % value)
 
 
+'''
+Class to handle the slider panel using a slider
+'''
+
+
 class SliderPanel:
     def __init__(self, name, min_val, max_val, parent, row, column, padx, func):
         # Sensor properties
@@ -110,6 +125,11 @@ class SliderPanel:
         self.panel.grid(row=row, column=column, padx=padx)
 
 
+'''
+Class to handle the titles used for the panels
+'''
+
+
 class SectionTitle:
     def __init__(self, title, parent, row, column, width, top=10, bottom=10):
         Separator(parent, orient=HORIZONTAL).grid(
@@ -121,6 +141,11 @@ class SectionTitle:
         self.label.grid(row=row, column=column, pady=(top, bottom))
 
 
+'''
+Class to handle the eight different state panels
+'''
+
+
 class StatePanel:
     def __init__(self, state, parent, row, column, width, padx):
         self.state_index = STATES.index(state)
@@ -128,6 +153,7 @@ class StatePanel:
         self.raisedPanel = Frame(self.panel, width=width, pady=3, bd=1, relief=RAISED)
         SectionTitle(state, self.panel, row=0, column=0, width=170)
 
+        # DC motor position GUI
         if self.state_index == 1:
             self.slider1 = SliderPanel(
                 'Angle',
@@ -149,6 +175,7 @@ class StatePanel:
                 padx=9,
             )
 
+        # DC motor velocity GUI
         elif self.state_index == 2:
             self.slider1 = SliderPanel(
                 'Velocity',
@@ -170,6 +197,7 @@ class StatePanel:
                 padx=9,
             )
 
+        # DC motor position sensor
         elif self.state_index == 3:
             self.sensor1 = SensorPanel(
                 'Encoder Position (Ticks)',
@@ -190,6 +218,7 @@ class StatePanel:
                 padx=9,
             )
 
+        # DC motor velocity sensor
         elif self.state_index == 4:
             self.sensor1 = SensorPanel(
                 'Encoder Velocity (RPM)',
@@ -210,6 +239,7 @@ class StatePanel:
                 padx=9,
             )
 
+        # Stepper motor GUI control
         elif self.state_index == 5:
             self.slider1 = SliderPanel(
                 'Angle',
@@ -243,11 +273,13 @@ class StatePanel:
             )
             self.button.grid(row=3, column=0, pady=3)
 
+        # Stepper motor sensor control
         elif self.state_index == 6:
             self.sensor1 = SensorPanel(
                 'Slot Encoder', 0, 1, self.raisedPanel, row=1, column=0, padx=9
             )
 
+        # Servo motor GUI control
         elif self.state_index == 7:
             self.slider1 = SliderPanel(
                 'Angle',
@@ -263,6 +295,7 @@ class StatePanel:
                 'Flex Sensor', 0, 1024, self.raisedPanel, row=1, column=0, padx=9
             )
 
+        # Servo motor sensor control
         elif self.state_index == 8:
             self.sensor1 = SensorPanel(
                 'Flex Sensor', 0, 1024, self.raisedPanel, row=1, column=0, padx=9
@@ -271,6 +304,8 @@ class StatePanel:
         self.raisedPanel.grid(row=1, column=0, padx=padx)
         self.panel.grid(row=row, column=column, padx=padx)
         self.configure_state(self.raisedPanel, state=DISABLED)
+
+    '''Callback functions for all states'''
 
     def control_servo(self, value):
         arduino.rx_servo_angle = int(value)
@@ -302,6 +337,11 @@ class StatePanel:
                 continue
             else:
                 child.configure(state=state)
+
+
+'''
+Main class to handle the GUI
+'''
 
 
 class GUI(object):
@@ -462,6 +502,7 @@ class GUI(object):
 
         #########################################################################################
 
+        # Keep track all state panel objects
         self.current_state = STATES[0]
         self.state_panels = [
             self.state1_panel,
@@ -482,6 +523,8 @@ class GUI(object):
         )
 
         #########################################################################################
+
+    '''Callback functions'''
 
     def get_com_ports(self):
         # Linux
@@ -535,6 +578,10 @@ class GUI(object):
             arduino.rx_state = state_index
             arduino_send()
 
+    '''
+    Function to update data on the GUI from serial packets
+    '''
+
     def update_data(self):
         self.state1_panel.sensor1.set_sensor_value(arduino.tx_encoder['encoder_count'])
         self.state2_panel.sensor1.set_sensor_value(
@@ -552,9 +599,16 @@ class GUI(object):
         self.state8_panel.sensor1.set_sensor_value(arduino.tx_flex_sensor)
 
 
+'''
+Threaded function to keep listening to packets over serial
+'''
+
+
 def packet_listener():
     global app
     time.sleep(2)
+
+    # Keep running thread till GUI is open
     while not GUI_CLOSED:
         if arduino.is_open and arduino.recieve():
             app.update_data()
@@ -563,14 +617,18 @@ def packet_listener():
 
 
 if __name__ == '__main__':
+    # Start thread
     packet_listener_t = StoppableThread(target=packet_listener)
     packet_listener_t.start()
 
+    # Create GUI and start GUI thread
     root = Tk()
     root.wm_attributes('-type', 'splash')
-    # root.wm_attributes('-fullscreen','true')
     app = GUI(root)
     root.mainloop()
 
+    # Cleanup
     GUI_CLOSED = True
     packet_listener_t.stop()
+    if arduino.is_open:
+        arduino.close()

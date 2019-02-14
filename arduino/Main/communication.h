@@ -1,11 +1,17 @@
+''' Serial packet handler library
+
+    Author : Heethesh Vhavle
+                 Version : 1.0.0 Email ID : heethesh @cmu.edu
+'''
+
 #include <Arduino.h>
 #include <stdint.h>
 
-#ifndef CONTROLLER_H_
-#define CONTROLLER_H_
+#ifndef COMMUNICATION_H_
+#define COMMUNICATION_H_
 
-// Structure to handle the various outputs to the GUI
-typedef struct TXDataPacket {
+                                            // Structure to handle the various outputs to the GUI
+                                            typedef struct TXDataPacket {
     // Boolean data
     uint8_t slot_encoder;
 
@@ -34,10 +40,10 @@ typedef struct RXDataPacket {
     // State select
     uint8_t state;
 
-    // Input servo angle
+    // Servo motor
     uint8_t servo_angle;
 
-    // Input motor angle
+    // DC motor
     int16_t motor_angle;
     int16_t motor_velocity;
 
@@ -52,6 +58,5 @@ extern RXDataPacket rx_packet;
 
 void send_data();
 bool recieve_data();
-void clear_buffer();
 
 #endif

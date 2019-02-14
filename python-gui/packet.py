@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+'''
+Serial packet handler module
+'''
+
+__author__ = "Heethesh Vhavle"
+__version__ = "1.0.0"
+__email__ = "heethesh@cmu.edu"
+
 import time
 import serial
 import struct
@@ -103,16 +114,13 @@ class Packet:
             if self.ser.inWaiting() >= (data_length + 4):
                 # Verify header
                 if self.ser.read(1).decode('utf-8') != '$':
-                    # print('Header failed $')
                     return None
                 if self.ser.read(1).decode('utf-8') != '>':
-                    # print('Header failed >')
                     return None
 
                 # Verify data length
                 data = int(ord(self.ser.read(1).decode('utf-8')))
                 if data != data_length:
-                    # print('Data length failed')
                     return None
 
                 payload = self.ser.read(data_length)
@@ -126,8 +134,6 @@ class Packet:
                 for byte in payload:
                     calcsum ^= byte
                 if calcsum != ord(checksum):
-                    # print('Checksum failed')
-                    # print(calcsum, checksum)
                     return None
 
                 # Unpack data
@@ -209,7 +215,6 @@ if __name__ == '__main__':
     # packet.rx_global_switch = False
     # packet.rx_state = 10
     # packet.rx_servo_angle = 90
-
     # while True:
     #     packet.send()
     #     time.sleep(1)
