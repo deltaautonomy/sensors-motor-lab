@@ -1,8 +1,10 @@
-''' Serial packet handler library
+/*
+Serial packet handler library
 
-    Author : Heethesh Vhavle
-                 Version : 1.0.0 Email ID : heethesh @cmu.edu
-'''
+Author: Heethesh Vhavle
+Version: 1.0.0
+Email ID: heethesh@cmu.edu
+*/
 
 #include <Arduino.h>
 #include <stdint.h>
@@ -10,8 +12,8 @@
 #ifndef COMMUNICATION_H_
 #define COMMUNICATION_H_
 
-                                            // Structure to handle the various outputs to the GUI
-                                            typedef struct TXDataPacket {
+// Structure to handle the various outputs to the GUI
+typedef struct TXDataPacket {
     // Boolean data
     uint8_t slot_encoder;
 

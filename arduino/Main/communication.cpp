@@ -1,12 +1,14 @@
-''' Serial packet handler library
+/*
+Serial packet handler library
 
-    Author : Heethesh Vhavle
-                 Version : 1.0.0 Email ID : heethesh @cmu.edu
-'''
+Author: Heethesh Vhavle
+Version: 1.0.0
+Email ID: heethesh@cmu.edu
+*/
 
 #include "communication.h"
 
-                                            TXDataPacket tx_packet;
+TXDataPacket tx_packet;
 RXDataPacket rx_packet;
 
 void send_data()
