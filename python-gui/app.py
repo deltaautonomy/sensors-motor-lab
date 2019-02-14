@@ -56,8 +56,6 @@ STATES = [
 '''
 Function wrapper to send data packet to arduino
 '''
-
-
 def arduino_send():
     global last_time
     if (time.time() - last_time) > 0.005 and arduino.is_open:
@@ -68,8 +66,6 @@ def arduino_send():
 '''
 Class to handle the sensor panel using a progress bar
 '''
-
-
 class SensorPanel:
     def __init__(self, name, min_val, max_val, parent, row, column, padx):
         # Sensor properties
@@ -100,8 +96,6 @@ class SensorPanel:
 '''
 Class to handle the slider panel using a slider
 '''
-
-
 class SliderPanel:
     def __init__(self, name, min_val, max_val, parent, row, column, padx, func):
         # Sensor properties
@@ -128,8 +122,6 @@ class SliderPanel:
 '''
 Class to handle the titles used for the panels
 '''
-
-
 class SectionTitle:
     def __init__(self, title, parent, row, column, width, top=10, bottom=10):
         Separator(parent, orient=HORIZONTAL).grid(
@@ -144,13 +136,12 @@ class SectionTitle:
 '''
 Class to handle the eight different state panels
 '''
-
-
 class StatePanel:
     def __init__(self, state, parent, row, column, width, padx):
         self.state_index = STATES.index(state)
         self.panel = Frame(parent, width=width, pady=3)
-        self.raisedPanel = Frame(self.panel, width=width, pady=3, bd=1, relief=RAISED)
+        self.raisedPanel = Frame(self.panel, width=width, pady=3, 
+            bd=1, relief=RAISED)
         SectionTitle(state, self.panel, row=0, column=0, width=170)
 
         # DC motor position GUI
@@ -342,8 +333,6 @@ class StatePanel:
 '''
 Main class to handle the GUI
 '''
-
-
 class GUI(object):
     def __init__(self, master):
         # Main Window
@@ -357,7 +346,7 @@ class GUI(object):
         self.imgicon = PhotoImage(file=self.ICON_PATH)
         master.tk.call('wm', 'iconphoto', master._w, self.imgicon)
 
-        #########################################################################################
+        ###################################################################
 
         # Master Panel
         self.mpanel = Frame(
@@ -365,13 +354,13 @@ class GUI(object):
         )
         self.mpanel.pack()
 
-        #########################################################################################
+        ###################################################################
 
         # Left Panel
         self.lpanel = Frame(self.mpanel, width=170, height=self.height, pady=3)
         self.lpanel.grid(row=0, column=0, rowspan=4, padx=10)
 
-        #########################################################################################
+        ###################################################################
 
         # Info Panel
         self.raisedFrame = Frame(self.lpanel, bd=3, relief=GROOVE)
@@ -410,7 +399,7 @@ class GUI(object):
         )
         self.infolabel4.grid(row=4, column=0)
 
-        #########################################################################################
+        ###################################################################
 
         # COM Port Panel
         SectionTitle('Select COM Port', self.lpanel, 5, 0, 170)
@@ -426,12 +415,13 @@ class GUI(object):
         self.ddcom.grid(row=6, column=0)
 
         self.b1 = Button(
-            self.lpanel, text="Open Port", command=self.b1_clicked, pady=4, width=24
+            self.lpanel, text="Open Port", command=self.b1_clicked,
+            pady=4, width=24
         )
         self.b1.grid(row=7, column=0)
         self.b1.configure(state=DISABLED)
 
-        #########################################################################################
+        ###################################################################
 
         # State Select Panel
         SectionTitle('Select State', self.lpanel, 8, 0, 170)
@@ -445,12 +435,13 @@ class GUI(object):
         self.ddstate.grid(row=9, column=0)
 
         self.b2 = Button(
-            self.lpanel, text="Start Demo", command=self.b2_clicked, pady=4, width=24
+            self.lpanel, text="Start Demo", command=self.b2_clicked, 
+            pady=4, width=24
         )
         self.b2.grid(row=10, column=0)
         self.b2.configure(state=DISABLED)
 
-        #########################################################################################
+        ###################################################################
 
         # Separator
         Separator(self.mpanel, orient=VERTICAL).grid(
@@ -475,7 +466,7 @@ class GUI(object):
             STATES[4], self.rpanel, row=3, column=0, width=170, padx=9
         )
 
-        #########################################################################################
+        ###################################################################
 
         # Separator
         Separator(self.mpanel, orient=VERTICAL).grid(
@@ -500,7 +491,7 @@ class GUI(object):
             STATES[8], self.r2panel, row=3, column=0, width=170, padx=9
         )
 
-        #########################################################################################
+        ###################################################################
 
         # Keep track all state panel objects
         self.current_state = STATES[0]
@@ -515,14 +506,14 @@ class GUI(object):
             self.state8_panel,
         ]
 
-        #########################################################################################
+        ###################################################################
 
         # Separator
         Separator(self.mpanel, orient=VERTICAL).grid(
             row=0, column=3, rowspan=20, sticky=(N, S), padx=6
         )
 
-        #########################################################################################
+        ###################################################################
 
     '''Callback functions'''
 
@@ -581,7 +572,6 @@ class GUI(object):
     '''
     Function to update data on the GUI from serial packets
     '''
-
     def update_data(self):
         self.state1_panel.sensor1.set_sensor_value(arduino.tx_encoder['encoder_count'])
         self.state2_panel.sensor1.set_sensor_value(
@@ -602,8 +592,6 @@ class GUI(object):
 '''
 Threaded function to keep listening to packets over serial
 '''
-
-
 def packet_listener():
     global app
     time.sleep(2)
@@ -630,5 +618,4 @@ if __name__ == '__main__':
     # Cleanup
     GUI_CLOSED = True
     packet_listener_t.stop()
-    if arduino.is_open:
-        arduino.close()
+    if arduino.is_open: arduino.close()
